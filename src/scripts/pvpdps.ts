@@ -111,6 +111,11 @@ export function initPvpdpsPage(): void {
       recomputeRows();
     };
 
+    form.addEventListener("submit", (event) => {
+      event.preventDefault();
+      sync();
+    });
+
     for (const input of form.getElementsByTagName("input")) {
       const value = params.get(input.id);
       if (value !== null) {
@@ -126,9 +131,6 @@ export function initPvpdpsPage(): void {
         });
         continue;
       }
-      input.addEventListener("input", () => {
-        sync();
-      });
       input.addEventListener("change", () => {
         sync();
       });
