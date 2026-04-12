@@ -90,13 +90,15 @@ a {
 }
 
 .site-nav {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  display: flex;
+  flex-wrap: wrap;
   width: 100%;
   gap: 0.6rem;
+  align-items: start;
 }
 
 .site-nav a,
+.site-nav-dropdown summary,
 .button-primary,
 .button-secondary {
   display: inline-flex;
@@ -115,6 +117,58 @@ a {
   font-size: 0.88rem;
   line-height: 1.2;
   text-align: center;
+}
+
+.site-nav-dropdown {
+  position: relative;
+}
+
+.site-nav-dropdown summary {
+  min-width: 8rem;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.8);
+  font-size: 0.88rem;
+  line-height: 1.2;
+  cursor: pointer;
+  list-style: none;
+  gap: 0.45rem;
+}
+
+.site-nav-dropdown summary::after {
+  content: "▾";
+  font-size: 0.8em;
+}
+
+.site-nav-dropdown[open] summary::after {
+  content: "▴";
+}
+
+.site-nav-dropdown summary::-webkit-details-marker {
+  display: none;
+}
+
+.site-nav-menu {
+  position: absolute;
+  top: calc(100% + 0.45rem);
+  left: 0;
+  z-index: 10;
+  display: grid;
+  gap: 0.45rem;
+  min-width: min(26rem, calc(100vw - 2rem));
+  padding: 0.7rem;
+  border: 1px solid var(--line);
+  border-radius: 1.2rem;
+  background: rgba(255, 250, 241, 0.97);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(18px);
+}
+
+.site-nav-menu a {
+  justify-content: flex-start;
+  min-height: 0;
+  padding: 0.8rem 0.9rem;
+  border-radius: 0.95rem;
+  text-align: left;
 }
 
 .site-footer {
@@ -196,6 +250,23 @@ a {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
   gap: 1rem;
+}
+
+.tool-sections {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.tool-section {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.tool-section-header h2 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(1.5rem, 3vw, 2rem);
+  line-height: 1;
 }
 
 .tool-card {
@@ -445,7 +516,23 @@ input[type="range"] {
   }
 
   .site-nav {
+    display: grid;
     grid-template-columns: 1fr;
+  }
+
+  .site-nav > a,
+  .site-nav-dropdown {
+    width: 100%;
+  }
+
+  .site-nav-dropdown summary {
+    width: 100%;
+  }
+
+  .site-nav-menu {
+    position: static;
+    min-width: 0;
+    margin-top: 0.45rem;
   }
 }
 

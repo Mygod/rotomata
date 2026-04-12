@@ -47,11 +47,21 @@ const ogImage = new URL("/og/rotomata-banner.png", Astro.site);
         </a>
         <nav class="site-nav" aria-label="Primary">
           <a href="/">Home</a>
-          <a href="/judge">Can My Pokemon Be the Very Best Like No One Ever Was?</a>
-          <a href="/pvpstat">Is My Pokemon the Very Best Like No One Ever Was?</a>
-          <a href="/spinap">When to use (Silver) Pinap in raids</a>
-          <a href="/hardraid">Hardest Raid Bosses</a>
-          <a href="/pvpbp">Pee vee Pee Bee Pee Filter</a>
+          <details class="site-nav-dropdown">
+            <summary>PvP</summary>
+            <div class="site-nav-menu">
+              <a href="/judge">Can My Pokemon Be the Very Best Like No One Ever Was?</a>
+              <a href="/pvpstat">Is My Pokemon the Very Best Like No One Ever Was?</a>
+              <a href="/pvpbp">Pee vee Pee Bee Pee Filter</a>
+            </div>
+          </details>
+          <details class="site-nav-dropdown">
+            <summary>Raid</summary>
+            <div class="site-nav-menu">
+              <a href="/spinap">When to use (Silver) Pinap in raids</a>
+              <a href="/hardraid">Hardest Raid Bosses</a>
+            </div>
+          </details>
         </nav>
       </header>
       <main>
