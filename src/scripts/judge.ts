@@ -1,17 +1,31 @@
-import { loadPokemonCatalog, type JudgePickerEntry } from "../lib/pogo/pokedex";
+import { loadPokemonCatalog, type JudgePickerEntry, type PokedexEntry } from "../lib/pogo/pokedex";
 import { calculateCP, findMinLevel, parseStatsList, renderJudgeHtml } from "../lib/pogo/parity";
 
-function populatePokedex(entries: JudgePickerEntry[]): void {
-  const pokelist = document.getElementById("pokelist") as HTMLDataListElement | null;
-  if (!pokelist) {
+function populatePokemonPicker(entries: JudgePickerEntry[]): void {
+  const pokemonlist = document.getElementById("pokemonlist") as HTMLDataListElement | null;
+  if (!pokemonlist) {
     return;
   }
-  pokelist.replaceChildren();
+  pokemonlist.replaceChildren();
   for (const poke of entries) {
     const option = document.createElement("option");
     option.innerText = poke.value;
     option.value = poke.value;
-    pokelist.append(option);
+    pokemonlist.append(option);
+  }
+}
+
+function populateStatsList(entries: PokedexEntry[]): void {
+  const statslist = document.getElementById("statslist") as HTMLDataListElement | null;
+  if (!statslist) {
+    return;
+  }
+  statslist.replaceChildren();
+  for (const poke of entries) {
+    const option = document.createElement("option");
+    option.innerText = `#${poke.id}: ${poke.name}`;
+    option.value = `${poke.at}/${poke.df}/${poke.st}`;
+    statslist.append(option);
   }
 }
 
@@ -68,12 +82,13 @@ export function initJudgePage(): void {
     const cpInput = document.getElementById("cp") as HTMLInputElement;
     const params = new URLSearchParams(window.location.search);
     const judgePickerByValue = new Map<string, JudgePickerEntry>();
-    const applyCatalog = (entries: JudgePickerEntry[]): void => {
+    const applyCatalog = (judgeEntries: JudgePickerEntry[], statEntries: PokedexEntry[]): void => {
       judgePickerByValue.clear();
-      for (const entry of entries) {
+      for (const entry of judgeEntries) {
         judgePickerByValue.set(entry.value, entry);
       }
-      populatePokedex(entries);
+      populatePokemonPicker(judgeEntries);
+      populateStatsList(statEntries);
     };
 
     for (const input of forms[1].getElementsByTagName("input")) {
@@ -162,11 +177,11 @@ export function initJudgePage(): void {
 
     setStatus("Loading Pokemon data for the picker…");
     void loadPokemonCatalog((catalog) => {
-      applyCatalog(catalog.judgeEntries);
+      applyCatalog(catalog.judgeEntries, catalog.statEntries);
       setStatus("Pokemon data refreshed from upstream.");
     })
       .then((loaded) => {
-        applyCatalog(loaded.catalog.judgeEntries);
+        applyCatalog(loaded.catalog.judgeEntries, loaded.catalog.statEntries);
         setStatus(
           loaded.source === "cache"
             ? "Using cached Pokemon data. A background refresh will run when needed."
