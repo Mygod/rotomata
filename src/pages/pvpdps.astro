@@ -1,0 +1,83 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+---
+
+<BaseLayout
+  title="PvP/Rocket DPS"
+  description="Rank Pokemon GO PvP and Rocket attackers with the original pvpdps quick-move logic, optional charged-move mode, CP caps, and defender-type filters."
+>
+  <section class="tool-page">
+    <div class="tool-page-header">
+      <h1>PvP/Rocket DPS</h1>
+    </div>
+
+    <div class="tool-panel">
+      <form class="tool-form">
+        <div class="settings-row">
+          <div>
+            <label for="cpcap">CP cap:</label>
+            <input type="text" id="cpcap" list="cplist" />
+          </div>
+          <div>
+            <label for="type1">Defender type 1:</label>
+            <select id="type1">
+              <option value="None">None</option>
+            </select>
+          </div>
+          <div>
+            <label for="type2">Defender type 2:</label>
+            <select id="type2">
+              <option value="None">None</option>
+            </select>
+          </div>
+        </div>
+
+        <label class="checkbox-row" for="charged">
+          <input type="checkbox" id="charged" />
+          <span>Use charged moves</span>
+        </label>
+
+        <datalist id="cplist">
+          <option value="500"></option>
+          <option value="1500"></option>
+          <option value="2500"></option>
+          <option value="50000"></option>
+        </datalist>
+      </form>
+    </div>
+
+    <section class="result-panel">
+      <div class="tool-table-scroll">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <td>#</td>
+              <td>Pokemon</td>
+              <td>Form</td>
+              <td>Alignment</td>
+              <td>IV</td>
+              <td>Level</td>
+              <td>CP</td>
+              <td>Quick</td>
+              <td id="charged-column">Charged</td>
+              <td>DPS</td>
+              <td>TDO</td>
+            </tr>
+          </thead>
+          <tbody id="result"></tbody>
+        </table>
+      </div>
+      <div class="result-actions">
+        <button type="button" id="show-more" class="button-secondary" hidden>Show more</button>
+      </div>
+    </section>
+
+    <p id="pvpdps-data-status" class="data-status">Loading Pokemon data for the table…</p>
+  </section>
+
+  <script>
+    import { initPvpdpsPage } from "../scripts/pvpdps";
+
+    initPvpdpsPage();
+  </script>
+</BaseLayout>

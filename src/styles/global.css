@@ -313,6 +313,7 @@ label {
 }
 
 input[type="text"],
+select,
 input[type="submit"],
 input[type="button"] {
   min-height: 2.75rem;
@@ -326,6 +327,11 @@ input[type="button"] {
 input[type="text"] {
   width: 100%;
   padding: 0.7rem 0.9rem;
+}
+
+select {
+  width: 100%;
+  padding: 0.7rem 2.4rem 0.7rem 0.9rem;
 }
 
 input[type="submit"],
@@ -351,7 +357,14 @@ input[type="range"] {
   gap: 0.8rem;
 }
 
+.settings-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.8rem;
+}
+
 .triple-row > div,
+.settings-row > div,
 .inline-cluster > div {
   display: grid;
   gap: 0.35rem;
@@ -396,6 +409,16 @@ input[type="range"] {
   color: var(--muted);
   font-family: var(--font-mono);
   font-size: 0.9rem;
+}
+
+.result-actions {
+  margin-top: 1rem;
+  display: flex;
+  justify-content: center;
+}
+
+.result-actions .button-secondary {
+  cursor: pointer;
 }
 
 #result {
@@ -513,6 +536,10 @@ input[type="range"] {
 
   .triple-row {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .settings-row {
+    grid-template-columns: 1fr;
   }
 
   .site-nav {

@@ -758,7 +758,8 @@ describe("CodePen parity helpers", () => {
           }
         }
       },
-      types: {}
+      types: {},
+      moves: {}
     });
     expect(entries).toEqual([
       { id: 3, name: "Venusaur", at: 198, df: 189, st: 190 },
@@ -881,7 +882,8 @@ describe("CodePen parity helpers", () => {
           }
         }
       },
-      types: {}
+      types: {},
+      moves: {}
     });
     expect(catalog.judgeEntries.map((entry) => entry.value)).toEqual([
       "#4: Charmander",
@@ -1092,7 +1094,8 @@ describe("CodePen parity helpers", () => {
           typeName: "Dragon",
           weaknesses: [{ typeId: 15, typeName: "Ice" }, { typeId: 16, typeName: "Dragon" }]
         }
-      }
+      },
+      moves: {}
     });
     expect(entries.map((entry) => `${entry.pokemon}:${entry.form}:${entry.tier}`)).toEqual([
       "Blacephalon::T5",
