@@ -93,6 +93,23 @@ export function initJudgePage(): void {
       work();
     };
 
+    const hasStatsInList = (targetStats: string): boolean =>
+      statsInput.value
+        .split(",")
+        .map((entry) => entry.trim())
+        .filter(Boolean)
+        .includes(targetStats);
+
+    const submitSelectedPokemon = (): void => {
+      withSelectedPokemon((entry) => {
+        if (hasStatsInList(entry.stats)) {
+          statsInput.value = entry.familyStats.join(",");
+        } else {
+          statsInput.value += `${statsInput.value ? "," : ""}${entry.stats}`;
+        }
+      });
+    };
+
     addStatsButton?.addEventListener("click", () => {
       withSelectedPokemon((entry) => {
         statsInput.value += `${statsInput.value ? "," : ""}${entry.stats}`;
@@ -103,6 +120,14 @@ export function initJudgePage(): void {
       withSelectedPokemon((entry) => {
         statsInput.value = entry.familyStats.join(",");
       });
+    });
+
+    pickerInput.addEventListener("keydown", (event) => {
+      if (event.key !== "Enter") {
+        return;
+      }
+      event.preventDefault();
+      submitSelectedPokemon();
     });
 
     purifyButton?.addEventListener("click", () => {

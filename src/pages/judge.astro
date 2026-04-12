@@ -12,11 +12,11 @@ import BaseLayout from "../layouts/BaseLayout.astro";
     </div>
 
     <div class="tool-panel">
-      <form class="tool-form tool-form-picker" onsubmit="event.preventDefault()">
+      <form class="tool-form tool-form-picker">
         <label for="statspicker">Pokemon picker:</label>
         <div class="inline-cluster picker-row">
           <input type="text" id="statspicker" list="pokelist" />
-          <input type="submit" id="addstats" value="Add to list" />
+          <input type="button" id="addstats" value="Add to list" />
           <input
             type="button"
             id="usefamily"
