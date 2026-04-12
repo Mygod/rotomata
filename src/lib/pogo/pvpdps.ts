@@ -106,6 +106,19 @@ export interface PvpdpsDisplayRow {
   tdo: string;
 }
 
+export interface DoubleWeaknessPreset {
+  value: string;
+  label: string;
+  attackingType: string;
+  defenderType1: string;
+  defenderType2: string;
+  count: number;
+}
+
+const NO_PRESET_DEFENDER_TYPE = "None";
+const GHOST_TYPE_ID = 8;
+const DARK_TYPE_ID = 17;
+
 function calculatePvpdpsCpMultiplier(level: number): number {
   if (level < 40) {
     return calculateCpMultiplier(level);
@@ -442,9 +455,7 @@ function pushRowsForCarrier(
         shadow: true,
         dps: row.dps * 1.2
       };
-      if (!PREFER_RANK_1) {
-        shadowRow.value /= 1.2;
-      }
+      shadowRow.value /= 1.2;
       rows.push(shadowRow);
     }
   }
@@ -454,6 +465,149 @@ export function listPvpdpsTypeNames(masterfile: Masterfile): string[] {
   return Object.values(masterfile.types)
     .sort((left, right) => left.typeId - right.typeId)
     .map((type) => type.typeName);
+}
+
+function typeMatchupMultiplier(defenderType: MasterfileTypeEntry, attackingTypeId: number): number {
+  if ((defenderType.immunes ?? []).some((type) => type.typeId === attackingTypeId)) {
+    return 0.390625;
+  }
+  if ((defenderType.resistances ?? []).some((type) => type.typeId === attackingTypeId)) {
+    return 0.625;
+  }
+  if ((defenderType.weaknesses ?? []).some((type) => type.typeId === attackingTypeId)) {
+    return 1.6;
+  }
+  return 1;
+}
+
+function countSpeciesByTypeCombo(masterfile: Masterfile): Map<string, number> {
+  const counts = new Map<string, number>();
+  const toKey = (typeIds: number[]): string => typeIds.join(":");
+  const addTypes = (seen: Set<string>, types: Record<string, MasterfileTypeRef> | undefined): void => {
+    const typeIds = Object.values(types ?? {})
+      .map((type) => type.typeId)
+      .sort((left, right) => left - right);
+    if (!typeIds.length) {
+      return;
+    }
+    seen.add(toKey(typeIds));
+  };
+  for (const pokemon of Object.values(masterfile.pokemon)) {
+    const seen = new Set<string>();
+    addTypes(seen, pokemon.types);
+    for (const form of Object.values(pokemon.forms ?? {})) {
+      addTypes(seen, form.types ?? pokemon.types);
+    }
+    for (const tempEvolution of Object.values(pokemon.tempEvolutions ?? {})) {
+      addTypes(seen, tempEvolution.types ?? pokemon.types);
+    }
+    for (const comboKey of seen) {
+      counts.set(comboKey, (counts.get(comboKey) ?? 0) + 1);
+    }
+  }
+  return counts;
+}
+
+export function listDoubleWeaknessPresets(masterfile: Masterfile): DoubleWeaknessPreset[] {
+  const defendingTypes = Object.values(masterfile.types)
+    .filter((type) => type.typeId > 0)
+    .sort((left, right) => left.typeId - right.typeId);
+  const comboCounts = countSpeciesByTypeCombo(masterfile);
+  const presets = new Map<
+    string,
+    DoubleWeaknessPreset & { attackingTypeId: number; defenderType1Id: number; defenderType2Id: number }
+  >();
+  const registerPreset = (
+    attackingTypeId: number | null,
+    firstType: MasterfileTypeEntry,
+    secondType?: MasterfileTypeEntry,
+    overrideAttackingType?: string
+  ): void => {
+    const attackingType = attackingTypeId === null ? null : masterfile.types[String(attackingTypeId)];
+    if (attackingTypeId !== null && !attackingType) {
+      return;
+    }
+    const defenderType1Id = firstType.typeId;
+    const defenderType2Id = secondType?.typeId ?? 0;
+    const countKey = secondType ? `${defenderType1Id}:${defenderType2Id}` : `${defenderType1Id}`;
+    const count = comboCounts.get(countKey) ?? 0;
+    if (count <= 0) {
+      return;
+    }
+    const attackingTypeLabel = overrideAttackingType ?? attackingType?.typeName ?? "";
+    const key = `${attackingTypeLabel}:${countKey}`;
+    if (presets.has(key)) {
+      return;
+    }
+    const defenderLabel = secondType
+      ? `${firstType.typeName}+${secondType.typeName}`
+      : firstType.typeName;
+    presets.set(key, {
+      value: key,
+      label: `${attackingTypeLabel} -> ${defenderLabel} (${count})`,
+      attackingType: attackingTypeLabel,
+      defenderType1: firstType.typeName,
+      defenderType2: secondType?.typeName ?? NO_PRESET_DEFENDER_TYPE,
+      count,
+      attackingTypeId: attackingTypeId ?? DARK_TYPE_ID,
+      defenderType1Id,
+      defenderType2Id
+    });
+  };
+  for (const firstType of defendingTypes) {
+    const singleWeaknesses = defendingTypes
+      .map((attackingType) => attackingType.typeId)
+      .filter((attackingTypeId) => typeMatchupMultiplier(firstType, attackingTypeId) > 1);
+    if (singleWeaknesses.length === 1) {
+      registerPreset(singleWeaknesses[0], firstType);
+    }
+  }
+  for (let firstIndex = 0; firstIndex < defendingTypes.length; firstIndex += 1) {
+    for (let secondIndex = firstIndex + 1; secondIndex < defendingTypes.length; secondIndex += 1) {
+      const firstType = defendingTypes[firstIndex];
+      const secondType = defendingTypes[secondIndex];
+      const totalWeaknesses: number[] = [];
+      const doubleWeaknesses: number[] = [];
+      for (const attackingType of defendingTypes) {
+        const multiplier =
+          typeMatchupMultiplier(firstType, attackingType.typeId) *
+          typeMatchupMultiplier(secondType, attackingType.typeId);
+        if (multiplier > 1) {
+          totalWeaknesses.push(attackingType.typeId);
+        }
+        if (multiplier > 1.6) {
+          doubleWeaknesses.push(attackingType.typeId);
+        }
+      }
+      if (doubleWeaknesses.length === 1) {
+        registerPreset(doubleWeaknesses[0], firstType, secondType);
+      } else if (
+        doubleWeaknesses.length === 2 &&
+        doubleWeaknesses.includes(DARK_TYPE_ID) &&
+        doubleWeaknesses.includes(GHOST_TYPE_ID)
+      ) {
+        registerPreset(null, firstType, secondType, "Dark+Ghost");
+      }
+      if (totalWeaknesses.length === 1) {
+        registerPreset(totalWeaknesses[0], firstType, secondType);
+      }
+    }
+  }
+  return Array.from(presets.values())
+    .sort(
+    (left, right) =>
+      left.attackingTypeId - right.attackingTypeId ||
+      left.defenderType1Id - right.defenderType1Id ||
+      left.defenderType2Id - right.defenderType2Id
+    )
+    .map(
+      ({
+        attackingTypeId: _attackingTypeId,
+        defenderType1Id: _defenderType1Id,
+        defenderType2Id: _defenderType2Id,
+        ...preset
+      }) => preset
+    );
 }
 
 export function buildPvpdpsRows(masterfile: Masterfile, input: PvpdpsInput): PvpdpsRow[] {

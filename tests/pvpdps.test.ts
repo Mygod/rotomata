@@ -6,7 +6,12 @@ import {
   type MasterfilePokemon,
   type MasterfileTypeEntry
 } from "../src/lib/pogo/masterfile";
-import { buildPvpdpsRows, formatPvpdpsRow, listPvpdpsTypeNames } from "../src/lib/pogo/pvpdps";
+import {
+  buildPvpdpsRows,
+  formatPvpdpsRow,
+  listDoubleWeaknessPresets,
+  listPvpdpsTypeNames
+} from "../src/lib/pogo/pvpdps";
 
 function createType(typeId: number, typeName: string, overrides: Partial<MasterfileTypeEntry> = {}): MasterfileTypeEntry {
   return {
@@ -52,11 +57,18 @@ function createPokemon(
 
 const TYPE_NAMES: Record<number, string> = {
   1: "Normal",
+  2: "Fighting",
+  6: "Rock",
+  7: "Bug",
   8: "Ghost",
+  9: "Steel",
   10: "Fire",
   11: "Water",
   12: "Grass",
-  14: "Psychic"
+  13: "Electric",
+  14: "Psychic",
+  17: "Dark",
+  18: "Fairy"
 };
 
 function createBaseMasterfile(pokemon: Record<string, MasterfilePokemon>): Masterfile {
@@ -163,6 +175,116 @@ describe("pvpdps", () => {
     expect(listPvpdpsTypeNames(masterfile)).toEqual(["Normal", "Ghost", "Fire", "Water", "Grass", "Psychic"]);
   });
 
+  it("lists weakness presets for single-weakness and double-weakness combos", () => {
+    const presets = listDoubleWeaknessPresets({
+      pokemon: {
+        "1": createPokemon("Normalmon", 1, [1], [401], [501], 100, 100, 100),
+        "2": createPokemon("Electricmon", 2, [13], [401], [501], 100, 100, 100),
+        "3": createPokemon("NormalGhostmon", 3, [1, 8], [401], [501], 100, 100, 100),
+        "4": createPokemon("GrassFairymon", 4, [12, 18], [401], [501], 100, 100, 100),
+        "5": createPokemon("BugGrassmon", 5, [7, 12], [401], [501], 100, 100, 100),
+        "6": createPokemon("GhostPsychicmon", 6, [8, 14], [401], [501], 100, 100, 100),
+        "7": createPokemon("GrassPsychicmon", 7, [12, 14], [401], [501], 100, 100, 100),
+        "8": createPokemon("RockSteelmon", 8, [6, 9], [401], [501], 100, 100, 100)
+      },
+      moves: {},
+      types: {
+        "1": createType(1, "Normal", {
+          weaknesses: [{ typeId: 2, typeName: "Fighting" }],
+          immunes: [{ typeId: 8, typeName: "Ghost" }]
+        }),
+        "2": createType(2, "Fighting"),
+        "3": createType(3, "Flying"),
+        "4": createType(4, "Poison"),
+        "5": createType(5, "Ground"),
+        "6": createType(6, "Rock", {
+          weaknesses: [
+            { typeId: 2, typeName: "Fighting" },
+            { typeId: 5, typeName: "Ground" },
+            { typeId: 9, typeName: "Steel" },
+            { typeId: 10, typeName: "Fire" },
+            { typeId: 11, typeName: "Water" },
+            { typeId: 12, typeName: "Grass" }
+          ]
+        }),
+        "7": createType(7, "Bug", {
+          weaknesses: [
+            { typeId: 3, typeName: "Flying" },
+            { typeId: 10, typeName: "Fire" },
+            { typeId: 6, typeName: "Rock" }
+          ]
+        }),
+        "8": createType(8, "Ghost", {
+          weaknesses: [
+            { typeId: 8, typeName: "Ghost" },
+            { typeId: 17, typeName: "Dark" }
+          ],
+          immunes: [
+            { typeId: 1, typeName: "Normal" },
+            { typeId: 2, typeName: "Fighting" }
+          ]
+        }),
+        "9": createType(9, "Steel", {
+          weaknesses: [
+            { typeId: 2, typeName: "Fighting" },
+            { typeId: 5, typeName: "Ground" },
+            { typeId: 10, typeName: "Fire" }
+          ]
+        }),
+        "10": createType(10, "Fire"),
+        "13": createType(13, "Electric", {
+          weaknesses: [{ typeId: 5, typeName: "Ground" }]
+        }),
+        "14": createType(14, "Psychic", {
+          weaknesses: [
+            { typeId: 7, typeName: "Bug" },
+            { typeId: 8, typeName: "Ghost" },
+            { typeId: 17, typeName: "Dark" }
+          ]
+        }),
+        "17": createType(17, "Dark"),
+        "12": createType(12, "Grass", {
+          weaknesses: [
+            { typeId: 3, typeName: "Flying" },
+            { typeId: 4, typeName: "Poison" },
+            { typeId: 7, typeName: "Bug" },
+            { typeId: 10, typeName: "Fire" },
+            { typeId: 15, typeName: "Ice" }
+          ]
+        }),
+        "18": createType(18, "Fairy", {
+          weaknesses: [
+            { typeId: 4, typeName: "Poison" },
+            { typeId: 9, typeName: "Steel" }
+          ]
+        })
+      }
+    });
+
+    const labels = presets.map((preset) => preset.label);
+
+    expect(labels).toEqual(
+      expect.arrayContaining([
+        "Fighting -> Normal (1)",
+        "Poison -> Grass+Fairy (1)",
+        "Ground -> Electric (1)",
+        "Bug -> Grass+Psychic (1)",
+        "Dark -> Normal+Ghost (1)",
+        "Dark+Ghost -> Ghost+Psychic (1)"
+      ])
+    );
+    expect(labels.indexOf("Bug -> Grass+Psychic (1)")).toBeLessThan(
+      labels.indexOf("Dark -> Normal+Ghost (1)")
+    );
+    expect(labels.indexOf("Dark -> Normal+Ghost (1)")).toBeLessThan(
+      labels.indexOf("Dark+Ghost -> Ghost+Psychic (1)")
+    );
+    expect(labels).not.toContain("Ghost -> Ghost+Psychic (1)");
+    expect(labels).not.toContain("Dark -> Ghost+Psychic (1)");
+    expect(labels).not.toContain("Ground -> Rock+Steel (1)");
+    expect(labels).not.toContain("Fighting -> Rock+Steel (1)");
+  });
+
   it("applies prepared elite charged move patches to the shared masterfile", () => {
     const masterfile = applyMasterfilePatches({
       pokemon: {
@@ -240,6 +362,8 @@ describe("pvpdps", () => {
     expect(normal).toBeDefined();
     expect(shadow).toBeDefined();
     expect(shadow!.dps / normal!.dps).toBeCloseTo(1.2);
+    expect(shadow!.value / normal!.value).toBeCloseTo(1 / 1.2);
+    expect(formatPvpdpsRow(masterfile, shadow!).tdo).toBe(formatPvpdpsRow(masterfile, normal!).tdo);
   });
 
   it("applies the Deoxys Attack IV-floor hack", () => {

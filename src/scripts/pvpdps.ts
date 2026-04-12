@@ -2,12 +2,15 @@ import { loadMasterfile, type Masterfile } from "../lib/pogo/masterfile";
 import {
   buildPvpdpsRows,
   formatPvpdpsRow,
+  listDoubleWeaknessPresets,
   listPvpdpsTypeNames,
+  type DoubleWeaknessPreset,
   type PvpdpsRow
 } from "../lib/pogo/pvpdps";
 
 const PAGE_SIZE = 50;
 const NO_TYPE_VALUE = "None";
+const NO_PRESET_VALUE = "None";
 
 function setStatus(message: string, isError = false): void {
   const status = document.getElementById("pvpdps-data-status");
@@ -33,6 +36,31 @@ function populateTypeSelect(masterfile: Masterfile, id: string): void {
   }
   if (Array.from(select.options).some((option) => option.value === currentValue)) {
     select.value = currentValue;
+  }
+  delete select.dataset.initialValue;
+}
+
+function populateDoubleWeaknessSelect(presets: DoubleWeaknessPreset[]): void {
+  const select = document.getElementById("doubleweakness") as HTMLSelectElement | null;
+  if (!select) {
+    return;
+  }
+  const currentValue = (select.dataset.initialValue ?? select.value) || NO_PRESET_VALUE;
+  select.replaceChildren();
+  const noneOption = document.createElement("option");
+  noneOption.value = NO_PRESET_VALUE;
+  noneOption.textContent = NO_PRESET_VALUE;
+  select.append(noneOption);
+  for (const preset of presets) {
+    const option = document.createElement("option");
+    option.value = preset.value;
+    option.textContent = preset.label;
+    select.append(option);
+  }
+  if (Array.from(select.options).some((option) => option.value === currentValue)) {
+    select.value = currentValue;
+  } else {
+    select.value = NO_PRESET_VALUE;
   }
   delete select.dataset.initialValue;
 }
@@ -87,8 +115,28 @@ export function initPvpdpsPage(): void {
     const form = document.getElementsByTagName("form")[0];
     const params = new URLSearchParams(window.location.search);
     let masterfile: Masterfile | null = null;
+    let presets: DoubleWeaknessPreset[] = [];
     let rows: PvpdpsRow[] = [];
     let visibleCount = PAGE_SIZE;
+
+    const getTypeSelect = (id: string): HTMLSelectElement =>
+      document.getElementById(id) as HTMLSelectElement;
+
+    const syncDoubleWeaknessSelect = (): void => {
+      const presetSelect = document.getElementById("doubleweakness") as HTMLSelectElement | null;
+      if (!presetSelect) {
+        return;
+      }
+      const type1 = getTypeSelect("type1").value;
+      const type2 = getTypeSelect("type2").value;
+      const matches = presets.filter(
+        (preset) => preset.defenderType1 === type1 && preset.defenderType2 === type2
+      );
+      if (matches.some((preset) => preset.value === presetSelect.value)) {
+        return;
+      }
+      presetSelect.value = matches.length === 1 ? matches[0].value : NO_PRESET_VALUE;
+    };
 
     const recomputeRows = (): void => {
       if (!masterfile) {
@@ -136,13 +184,27 @@ export function initPvpdpsPage(): void {
       });
     }
     for (const select of form.getElementsByTagName("select")) {
-      const value = params.get(select.id);
-      if (value !== null) {
-        select.dataset.initialValue = value;
-      } else {
-        select.dataset.initialValue = NO_TYPE_VALUE;
+      if (select.id === "doubleweakness") {
+        select.dataset.initialValue = NO_PRESET_VALUE;
+        select.addEventListener("change", () => {
+          const preset = presets.find((item) => item.value === select.value);
+          const type1Select = getTypeSelect("type1");
+          const type2Select = getTypeSelect("type2");
+          if (!preset) {
+            type1Select.value = NO_TYPE_VALUE;
+            type2Select.value = NO_TYPE_VALUE;
+          } else {
+            type1Select.value = preset.defenderType1;
+            type2Select.value = preset.defenderType2;
+          }
+          sync();
+        });
+        continue;
       }
+      const value = params.get(select.id);
+      select.dataset.initialValue = value ?? NO_TYPE_VALUE;
       select.addEventListener("change", () => {
+        syncDoubleWeaknessSelect();
         sync();
       });
     }
@@ -159,15 +221,21 @@ export function initPvpdpsPage(): void {
     setStatus("Loading Pokemon data for the table…");
     void loadMasterfile((refreshedMasterfile) => {
       masterfile = refreshedMasterfile;
+      presets = listDoubleWeaknessPresets(refreshedMasterfile);
       populateTypeSelect(refreshedMasterfile, "type1");
       populateTypeSelect(refreshedMasterfile, "type2");
+      populateDoubleWeaknessSelect(presets);
+      syncDoubleWeaknessSelect();
       recomputeRows();
       setStatus("Pokemon data refreshed from upstream.");
     })
       .then((loaded) => {
         masterfile = loaded.masterfile;
+        presets = listDoubleWeaknessPresets(loaded.masterfile);
         populateTypeSelect(loaded.masterfile, "type1");
         populateTypeSelect(loaded.masterfile, "type2");
+        populateDoubleWeaknessSelect(presets);
+        syncDoubleWeaknessSelect();
         recomputeRows();
         setStatus(
           loaded.source === "cache"
