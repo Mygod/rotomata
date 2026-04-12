@@ -1,0 +1,38 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+---
+
+<BaseLayout
+  title="Rotomata"
+  description="Rotomata hosts Pokemon GO gameplay tools focused on tryhard optimization workflows."
+>
+  <section class="hero">
+    <p class="eyebrow">Rotomata</p>
+    <h1>Pokemon GO tools for people who optimize everything.</h1>
+    <p class="lede">
+      Rotomata is a long-lived home for practical gameplay calculators, ranking tools, and
+      spreadsheet-adjacent helpers that deserve a real URL instead of another forgotten CodePen.
+    </p>
+    <div class="hero-actions">
+      <a class="button-primary" href="/judge">Can My Pokemon Be the Very Best Like No One Ever Was?</a>
+      <a class="button-secondary" href="/pvpstat">Is My Pokemon the Very Best Like No One Ever Was?</a>
+    </div>
+  </section>
+
+  <section class="card-grid" aria-label="Available tools">
+    <article class="tool-card">
+      <h2><a href="/judge">Can My Pokemon Be the Very Best Like No One Ever Was?</a></h2>
+      <p>
+        Multi-target filtering for “is this worth keeping?” checks across CP caps, level caps,
+        purification, and strict Pareto-front Rank+ logic.
+      </p>
+    </article>
+    <article class="tool-card">
+      <h2><a href="/pvpstat">Is My Pokemon the Very Best Like No One Ever Was?</a></h2>
+      <p>
+        Detailed Rank+ breakdowns for one stat line, including attack, defense, HP, stat product,
+        and strict-dominance reporting.
+      </p>
+    </article>
+  </section>
+</BaseLayout>

@@ -1,0 +1,95 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+---
+
+<BaseLayout
+  title="Can My Pokemon Be the Very Best Like No One Ever Was?"
+  description="Judge whether a Pokemon GO stat line is worth keeping with exact CodePen Rank+ parity."
+>
+  <section class="tool-page">
+    <div class="tool-page-header">
+      <h1>Can My Pokemon Be the Very Best Like No One Ever Was?</h1>
+    </div>
+
+    <div class="tool-panel">
+      <p id="judge-data-status" class="data-status">Loading Pokemon data for the picker…</p>
+
+      <form class="tool-form tool-form-picker" onsubmit="event.preventDefault()">
+        <label for="statspicker">Pokemon/Base Stats picker:</label>
+        <div class="inline-cluster">
+          <input type="text" id="statspicker" list="pokelist" />
+          <input type="submit" id="addstats" value="Add to list" />
+        </div>
+      </form>
+
+      <form class="tool-form">
+        <label for="stats">Pokemon/Base Stats list:</label>
+        <input type="text" id="stats" list="pokelist" class="wide-input" />
+
+        <label for="cpcap">CP caps:</label>
+        <input type="text" id="cpcap" value="500,1500,2500,50000" />
+
+        <div class="triple-row">
+          <div>
+            <label for="ivfloor">IV Floor:</label>
+            <input type="text" id="ivfloor" list="ivlist" maxlength="2" class="iv" value="0" />
+          </div>
+          <div>
+            <label for="atk">Attack:</label>
+            <input type="text" id="atk" list="ivlist" maxlength="2" class="iv" value="0" />
+          </div>
+          <div>
+            <label for="def">Defense:</label>
+            <input type="text" id="def" list="ivlist" maxlength="2" class="iv" value="15" />
+          </div>
+          <div>
+            <label for="sta">HP:</label>
+            <input type="text" id="sta" list="ivlist" maxlength="2" class="iv" value="15" />
+          </div>
+        </div>
+
+        <div class="inline-cluster">
+          <div>
+            <label for="cp">Current CP:</label>
+            <input type="text" id="cp" maxlength="5" />
+          </div>
+          <input type="button" id="purify" value="Simulate purification" />
+        </div>
+
+        <label for="lvcap">Level caps:</label>
+        <input type="text" id="lvcap" value="50,51,60" />
+      </form>
+
+      <datalist id="pokelist"></datalist>
+      <datalist id="ivlist">
+        <option value="0"></option>
+        <option value="1"></option>
+        <option value="2"></option>
+        <option value="3"></option>
+        <option value="4"></option>
+        <option value="5"></option>
+        <option value="6"></option>
+        <option value="7"></option>
+        <option value="8"></option>
+        <option value="9"></option>
+        <option value="10"></option>
+        <option value="11"></option>
+        <option value="12"></option>
+        <option value="13"></option>
+        <option value="14"></option>
+        <option value="15"></option>
+      </datalist>
+    </div>
+
+    <section class="result-panel">
+      <h2>Results</h2>
+      <p id="result"></p>
+    </section>
+  </section>
+
+  <script>
+    import { initJudgePage } from "../scripts/judge";
+
+    initJudgePage();
+  </script>
+</BaseLayout>

@@ -1,0 +1,94 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+---
+
+<BaseLayout
+  title="Is My Pokemon the Very Best Like No One Ever Was?"
+  description="Inspect exact CodePen Rank+ PvP stat breakdowns for one Pokemon GO base stat line."
+>
+  <section class="tool-page">
+    <div class="tool-page-header">
+      <h1>Is My Pokemon the Very Best Like No One Ever Was?</h1>
+    </div>
+
+    <div class="tool-panel">
+      <p id="pvpstat-data-status" class="data-status">Loading Pokemon data for the picker…</p>
+
+      <form class="tool-form">
+        <label for="stats">Pokemon/Base Stats:</label>
+        <input type="text" id="stats" list="pokelist" />
+
+        <label for="cpcap">CP cap:</label>
+        <input type="text" id="cpcap" list="cplist" value="1500" />
+        <datalist id="cplist">
+          <option value="500"></option>
+          <option value="1500"></option>
+          <option value="2500"></option>
+          <option value="50000"></option>
+        </datalist>
+
+        <div class="triple-row">
+          <div>
+            <label for="ivfloor">IV Floor:</label>
+            <input type="text" id="ivfloor" list="ivlist" maxlength="2" class="iv" value="0" />
+          </div>
+          <div>
+            <label for="atk">Attack:</label>
+            <input type="text" id="atk" list="ivlist" maxlength="2" class="iv" value="0" />
+          </div>
+          <div>
+            <label for="def">Defense:</label>
+            <input type="text" id="def" list="ivlist" maxlength="2" class="iv" value="15" />
+          </div>
+          <div>
+            <label for="sta">HP:</label>
+            <input type="text" id="sta" list="ivlist" maxlength="2" class="iv" value="15" />
+          </div>
+        </div>
+
+        <label for="lvcap">Level cap:</label>
+        <input type="text" id="lvcap" list="lvlist" value="50" />
+      </form>
+
+      <datalist id="pokelist"></datalist>
+      <datalist id="ivlist">
+        <option value="0"></option>
+        <option value="1"></option>
+        <option value="2"></option>
+        <option value="3"></option>
+        <option value="4"></option>
+        <option value="5"></option>
+        <option value="6"></option>
+        <option value="7"></option>
+        <option value="8"></option>
+        <option value="9"></option>
+        <option value="10"></option>
+        <option value="11"></option>
+        <option value="12"></option>
+        <option value="13"></option>
+        <option value="14"></option>
+        <option value="15"></option>
+      </datalist>
+      <datalist id="lvlist">
+        <option value="40"></option>
+        <option value="50"></option>
+        <option value="51"></option>
+        <option value="52"></option>
+        <option value="55"></option>
+        <option value="60"></option>
+        <option value="100"></option>
+      </datalist>
+    </div>
+
+    <section class="result-panel">
+      <h2>Results</h2>
+      <p id="result"></p>
+    </section>
+  </section>
+
+  <script>
+    import { initPvpStatPage } from "../scripts/pvpstat";
+
+    initPvpStatPage();
+  </script>
+</BaseLayout>

@@ -1,0 +1,341 @@
+@import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Space+Grotesk:wght@500;700&display=swap");
+
+:root {
+  --bg: #f4efe2;
+  --bg-accent: #eadfc7;
+  --ink: #1e2731;
+  --muted: #4f5f67;
+  --panel: rgba(255, 250, 241, 0.88);
+  --panel-strong: rgba(255, 250, 241, 0.96);
+  --line: rgba(30, 39, 49, 0.16);
+  --signal: #0f766e;
+  --signal-warm: #d97706;
+  --signal-hot: #c2410c;
+  --shadow: 0 24px 60px rgba(30, 39, 49, 0.14);
+  --font-sans: "IBM Plex Sans", "Avenir Next", "Segoe UI", sans-serif;
+  --font-display: "Space Grotesk", "Avenir Next Condensed", sans-serif;
+  --font-mono: "IBM Plex Mono", "SFMono-Regular", "Consolas", monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  min-height: 100%;
+  background:
+    radial-gradient(circle at top left, rgba(15, 118, 110, 0.16), transparent 32%),
+    linear-gradient(135deg, var(--bg), var(--bg-accent));
+  color: var(--ink);
+  font-family: var(--font-sans);
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background-image:
+    linear-gradient(rgba(30, 39, 49, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(30, 39, 49, 0.04) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+a {
+  color: inherit;
+}
+
+.page-shell {
+  width: min(1100px, calc(100% - 2rem));
+  margin: 0 auto;
+  padding: 1rem 0 4rem;
+}
+
+.site-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  padding: 1rem 1.2rem;
+  border: 1px solid var(--line);
+  border-radius: 1.5rem;
+  background: rgba(255, 255, 255, 0.55);
+  backdrop-filter: blur(18px);
+  box-shadow: var(--shadow);
+}
+
+.site-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.9rem;
+  text-decoration: none;
+}
+
+.site-brand strong {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+  letter-spacing: 0.02em;
+}
+
+.site-brand small {
+  display: block;
+  color: var(--muted);
+}
+
+.site-brand-mark {
+  display: inline-grid;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 1rem;
+  background:
+    linear-gradient(145deg, var(--signal), #44a99e);
+  color: white;
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+}
+
+.site-nav {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.site-nav a,
+.button-primary,
+.button-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.75rem;
+  padding: 0.7rem 1rem;
+  border-radius: 999px;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.site-nav a {
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.8);
+  font-size: 0.88rem;
+  line-height: 1.2;
+  text-align: center;
+}
+
+.hero,
+.tool-panel,
+.result-panel,
+.tool-card {
+  border: 1px solid var(--line);
+  border-radius: 1.75rem;
+  background: var(--panel);
+  box-shadow: var(--shadow);
+}
+
+.hero {
+  padding: 2.2rem;
+  margin-bottom: 1.5rem;
+}
+
+.hero h1,
+.tool-page-header h1 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(2.3rem, 6vw, 4.4rem);
+  line-height: 0.95;
+  letter-spacing: -0.04em;
+}
+
+.eyebrow,
+.tool-kicker {
+  margin: 0 0 0.8rem;
+  color: var(--signal);
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.lede,
+.tool-page-header p {
+  max-width: 48rem;
+  color: var(--muted);
+  font-size: 1.05rem;
+}
+
+.hero-actions,
+.inline-cluster {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.8rem;
+  align-items: center;
+}
+
+.button-primary {
+  background: linear-gradient(135deg, var(--signal), #44a99e);
+  color: white;
+}
+
+.button-secondary {
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.8);
+}
+
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1rem;
+}
+
+.tool-card {
+  padding: 1.4rem;
+}
+
+.tool-card h2 {
+  margin: 0 0 0.6rem;
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+  line-height: 1.05;
+}
+
+.tool-page {
+  display: grid;
+  gap: 1rem;
+}
+
+.tool-page-header {
+  padding: 0.2rem 0.1rem 0.2rem;
+}
+
+.tool-panel,
+.result-panel {
+  padding: 1.4rem;
+}
+
+.result-panel h2 {
+  margin-top: 0;
+  font-family: var(--font-display);
+}
+
+.tool-form {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.tool-form + .tool-form {
+  margin-top: 1.4rem;
+}
+
+label {
+  font-weight: 600;
+}
+
+input[type="text"],
+input[type="submit"],
+input[type="button"] {
+  min-height: 2.75rem;
+  border: 1px solid rgba(30, 39, 49, 0.2);
+  border-radius: 0.95rem;
+  background: var(--panel-strong);
+  color: var(--ink);
+  font: inherit;
+}
+
+input[type="text"] {
+  width: 100%;
+  padding: 0.7rem 0.9rem;
+}
+
+input[type="submit"],
+input[type="button"] {
+  padding: 0.7rem 1rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.triple-row {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.8rem;
+}
+
+.triple-row > div,
+.inline-cluster > div {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.wide-input {
+  max-width: 55rem;
+}
+
+.iv {
+  width: 3.4rem;
+}
+
+.data-status {
+  margin-top: 0;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+}
+
+#result {
+  margin: 0;
+  line-height: 1.6;
+}
+
+#result a {
+  color: var(--signal);
+}
+
+.bar {
+  margin: 0.4rem 0 0.1rem;
+  border: 1px solid rgba(30, 39, 49, 0.25);
+  width: 100%;
+  border-radius: 0.75rem;
+  padding: 0.45rem 0.6rem;
+  text-shadow: 0 0 5px white, 0 0 5px white, 0 0 5px white;
+}
+
+.bad {
+  color: #a60000;
+}
+
+.good {
+  color: #2d6a2d;
+}
+
+@media (max-width: 720px) {
+  .page-shell {
+    width: min(100% - 1rem, 1100px);
+  }
+
+  .site-header {
+    padding: 1rem;
+    border-radius: 1.2rem;
+  }
+
+  .triple-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .site-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .hero,
+  .tool-panel,
+  .result-panel,
+  .tool-card {
+    padding: 1.1rem;
+    border-radius: 1.2rem;
+  }
+
+  .triple-row {
+    grid-template-columns: 1fr;
+  }
+}

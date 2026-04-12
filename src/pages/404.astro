@@ -1,0 +1,22 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+---
+
+<BaseLayout
+  title="Rotomata Not Found"
+  description="The requested Rotomata page does not exist."
+>
+  <section class="hero">
+    <p class="eyebrow">404</p>
+    <h1>Route not found.</h1>
+    <p class="lede">
+      That page is not part of the current Rotomata tool set. Use the homepage or jump straight into
+      the active tools.
+    </p>
+    <div class="hero-actions">
+      <a class="button-primary" href="/">Home</a>
+      <a class="button-secondary" href="/judge">Judge</a>
+      <a class="button-secondary" href="/pvpstat">PvP Stat</a>
+    </div>
+  </section>
+</BaseLayout>
