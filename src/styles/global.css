@@ -305,6 +305,11 @@ input[type="range"] {
   width: 3.4rem;
 }
 
+.hint {
+  text-decoration: underline;
+  text-decoration-style: dotted;
+}
+
 .data-status {
   margin-top: 0;
   color: var(--muted);
