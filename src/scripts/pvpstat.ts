@@ -24,6 +24,28 @@ function setStatus(message: string, isError = false): void {
   status.classList.toggle("bad", isError);
 }
 
+function updateQueryParam(params: URLSearchParams, key: string, value: string): void {
+  if (value.trim()) {
+    params.set(key, value);
+  } else {
+    params.delete(key);
+  }
+}
+
+function updateUrl(): void {
+  const url = new URL(window.location.href);
+  const params = new URLSearchParams();
+  updateQueryParam(params, "stats", (document.getElementById("stats") as HTMLInputElement).value);
+  updateQueryParam(params, "cpcap", (document.getElementById("cpcap") as HTMLInputElement).value);
+  updateQueryParam(params, "ivfloor", (document.getElementById("ivfloor") as HTMLInputElement).value);
+  updateQueryParam(params, "atk", (document.getElementById("atk") as HTMLInputElement).value);
+  updateQueryParam(params, "def", (document.getElementById("def") as HTMLInputElement).value);
+  updateQueryParam(params, "sta", (document.getElementById("sta") as HTMLInputElement).value);
+  updateQueryParam(params, "lvcap", (document.getElementById("lvcap") as HTMLInputElement).value);
+  url.search = params.toString();
+  history.replaceState(null, "", url);
+}
+
 function work(): void {
   const result = document.getElementById("result");
   const statsInput = document.getElementById("stats") as HTMLInputElement;
@@ -69,15 +91,26 @@ export function initPvpStatPage(): void {
   const run = (): void => {
     const form = document.getElementsByTagName("form")[0];
     const params = new URLSearchParams(window.location.search);
+    const sync = (shouldUpdateUrl = true): void => {
+      work();
+      if (shouldUpdateUrl) {
+        updateUrl();
+      }
+    };
     for (const input of form.getElementsByTagName("input")) {
       const value = params.get(input.id);
       if (value !== null) {
         input.value = value;
       }
-      input.addEventListener("change", work);
+      input.addEventListener("input", () => {
+        sync();
+      });
+      input.addEventListener("change", () => {
+        sync();
+      });
     }
     void hydratePokedex();
-    work();
+    sync(false);
   };
 
   if (document.readyState === "loading") {

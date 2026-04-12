@@ -38,6 +38,29 @@ function setStatus(message: string, isError = false): void {
   status.classList.toggle("bad", isError);
 }
 
+function updateQueryParam(params: URLSearchParams, key: string, value: string): void {
+  if (value.trim()) {
+    params.set(key, value);
+  } else {
+    params.delete(key);
+  }
+}
+
+function updateUrl(): void {
+  const url = new URL(window.location.href);
+  const params = new URLSearchParams();
+  updateQueryParam(params, "stats", (document.getElementById("stats") as HTMLInputElement).value);
+  updateQueryParam(params, "cpcap", (document.getElementById("cpcap") as HTMLInputElement).value);
+  updateQueryParam(params, "ivfloor", (document.getElementById("ivfloor") as HTMLInputElement).value);
+  updateQueryParam(params, "atk", (document.getElementById("atk") as HTMLInputElement).value);
+  updateQueryParam(params, "def", (document.getElementById("def") as HTMLInputElement).value);
+  updateQueryParam(params, "sta", (document.getElementById("sta") as HTMLInputElement).value);
+  updateQueryParam(params, "cp", (document.getElementById("cp") as HTMLInputElement).value);
+  updateQueryParam(params, "lvcap", (document.getElementById("lvcap") as HTMLInputElement).value);
+  url.search = params.toString();
+  history.replaceState(null, "", url);
+}
+
 function work(): void {
   const result = document.getElementById("result");
   const statsInput = document.getElementById("stats") as HTMLInputElement;
@@ -91,12 +114,27 @@ export function initJudgePage(): void {
       populateStatsList(statEntries);
     };
 
+    const sync = (shouldUpdateUrl = true): void => {
+      work();
+      if (shouldUpdateUrl) {
+        updateUrl();
+      }
+    };
+
     for (const input of forms[1].getElementsByTagName("input")) {
       const value = params.get(input.id);
       if (value !== null) {
         input.value = value;
       }
-      input.addEventListener("change", work);
+      if (input.type === "button") {
+        continue;
+      }
+      input.addEventListener("input", () => {
+        sync();
+      });
+      input.addEventListener("change", () => {
+        sync();
+      });
     }
 
     const withSelectedPokemon = (operation: (entry: JudgePickerEntry) => void): void => {
@@ -105,7 +143,7 @@ export function initJudgePage(): void {
         return;
       }
       operation(entry);
-      work();
+      sync();
     };
 
     const hasStatsInList = (targetStats: string): boolean =>
@@ -172,7 +210,7 @@ export function initJudgePage(): void {
       if (currentLevel && currentStats) {
         cpInput.value = String(calculateCP(currentStats, ivAtk, ivDef, ivSta, Math.max(25, currentLevel)));
       }
-      work();
+      sync();
     });
 
     setStatus("Loading Pokemon data for the picker…");
@@ -191,7 +229,7 @@ export function initJudgePage(): void {
       .catch(() => {
         setStatus("Pokemon list unavailable. Manual base stats still work.", true);
       });
-    work();
+    sync(false);
   };
 
   if (document.readyState === "loading") {
