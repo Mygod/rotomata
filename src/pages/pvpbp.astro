@@ -1,0 +1,136 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+---
+
+<BaseLayout
+  title="Pee vee Pee Bee Pee Filter"
+  description="Filter Pokemon GO PvP IV combinations with the exact CodePen Rank+ and suboptimal-IV behavior."
+>
+  <section class="tool-page">
+    <div class="tool-page-header">
+      <h1>Pee vee Pee Bee Pee Filter</h1>
+    </div>
+
+    <div class="tool-panel">
+      <form class="tool-form">
+        <label for="stats">Pokemon/Base Stats:</label>
+        <input type="text" id="stats" list="pokelist" />
+        <datalist id="pokelist"></datalist>
+
+        <label for="cpcap">CP cap:</label>
+        <input type="text" id="cpcap" list="cplist" value="1500" />
+        <datalist id="cplist">
+          <option value="500"></option>
+          <option value="1500"></option>
+          <option value="2500"></option>
+          <option value="50000"></option>
+        </datalist>
+
+        <div class="inline-cluster compact-row">
+          <div>
+            <label for="ivfloor">IV Floor:</label>
+            <input type="text" id="ivfloor" list="ivlist" maxlength="2" class="iv" value="0" />
+          </div>
+          <label class="checkbox-row compact-checkbox" for="suboptimal">
+            <input type="checkbox" id="suboptimal" />
+            <span>
+              Include <a href="/pvpstat" target="_blank" rel="noreferrer">suboptimal</a> IVs
+            </span>
+          </label>
+        </div>
+
+        <datalist id="ivlist">
+          <option value="0"></option>
+          <option value="1"></option>
+          <option value="2"></option>
+          <option value="3"></option>
+          <option value="4"></option>
+          <option value="5"></option>
+          <option value="6"></option>
+          <option value="7"></option>
+          <option value="8"></option>
+          <option value="9"></option>
+          <option value="10"></option>
+          <option value="11"></option>
+          <option value="12"></option>
+          <option value="13"></option>
+          <option value="14"></option>
+          <option value="15"></option>
+        </datalist>
+
+        <label for="lvcap">Level cap:</label>
+        <input type="text" id="lvcap" list="lvlist" value="50" />
+        <datalist id="lvlist">
+          <option value="40"></option>
+          <option value="50"></option>
+          <option value="51"></option>
+          <option value="52"></option>
+          <option value="55"></option>
+          <option value="60"></option>
+          <option value="100"></option>
+        </datalist>
+
+        <div class="filter-heading"><em>Filtering settings</em></div>
+
+        <label for="mincp">Minimum CP:</label>
+        <input type="text" id="mincp" />
+
+        <label for="maxlv">Maximum level:</label>
+        <input type="text" id="maxlv" list="lvlist" />
+
+        <label for="miniv">Minimum IV:</label>
+        <input type="text" id="miniv" list="ivlist" maxlength="2" class="iv" value="0" />
+
+        <div class="triple-row">
+          <div>
+            <label for="atk">Attack floor:</label>
+            <input type="text" id="atk" list="atklist" class="floor" />
+            <datalist id="atklist"></datalist>
+          </div>
+          <div>
+            <label for="def">Defense floor:</label>
+            <input type="text" id="def" list="deflist" class="floor" />
+            <datalist id="deflist"></datalist>
+          </div>
+          <div>
+            <label for="sta">HP floor:</label>
+            <input type="text" id="sta" list="stalist" class="floor" />
+            <datalist id="stalist"></datalist>
+          </div>
+        </div>
+      </form>
+    </div>
+
+    <section class="result-panel">
+      <div class="tool-table-scroll">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <td>IV</td>
+              <td>Level</td>
+              <td>CP</td>
+              <td>Attack</td>
+              <td>Defense</td>
+              <td>HP</td>
+              <td>Stat Product</td>
+              <td>#</td>
+              <td>Rank+</td>
+              <td class="hint" title="normalized stat product percent">NSPP</td>
+              <td>CP Lv20</td>
+              <td>CP Lv25</td>
+            </tr>
+          </thead>
+          <tbody id="result"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <p id="pvpbp-data-status" class="data-status">Loading Pokemon data for the picker…</p>
+  </section>
+
+  <script>
+    import { initPvpbpPage } from "../scripts/pvpbp";
+
+    initPvpbpPage();
+  </script>
+</BaseLayout>

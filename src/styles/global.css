@@ -51,8 +51,8 @@ a {
 
 .site-header {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  align-items: flex-start;
+  flex-direction: column;
   gap: 1rem;
   margin-bottom: 2rem;
   padding: 1rem 1.2rem;
@@ -96,8 +96,9 @@ a {
 }
 
 .site-nav {
-  display: inline-flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  width: 100%;
   gap: 0.6rem;
 }
 
@@ -253,6 +254,16 @@ input[type="button"] {
   cursor: pointer;
 }
 
+input[type="checkbox"] {
+  width: 1rem;
+  height: 1rem;
+  accent-color: var(--signal);
+}
+
+input[type="range"] {
+  width: 100%;
+}
+
 .triple-row {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -310,6 +321,83 @@ input[type="button"] {
   color: var(--signal);
 }
 
+.checkbox-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.7rem;
+  font-weight: 400;
+}
+
+.checkbox-row span {
+  font-weight: 500;
+}
+
+.compact-checkbox {
+  margin-top: 1.7rem;
+}
+
+.compact-row {
+  justify-content: space-between;
+}
+
+.range-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 1rem;
+  align-items: center;
+}
+
+.tool-details {
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.45);
+  padding: 0.85rem 1rem;
+}
+
+.tool-details summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.nested-form {
+  margin-top: 0.85rem;
+}
+
+.filter-heading {
+  color: var(--muted);
+}
+
+.tool-table-scroll {
+  overflow-x: auto;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.95rem;
+}
+
+.data-table td {
+  padding: 0.7rem 0.75rem;
+  border-bottom: 1px solid var(--line);
+  text-align: center;
+  vertical-align: top;
+}
+
+.data-table thead td {
+  position: sticky;
+  top: 0;
+  background: rgba(255, 250, 241, 0.96);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.detail-log {
+  line-height: 1.6;
+  font-family: var(--font-mono);
+  font-size: 0.92rem;
+}
+
 .bar {
   margin: 0.4rem 0 0.1rem;
   border: 1px solid rgba(30, 39, 49, 0.25);
@@ -340,6 +428,10 @@ input[type="button"] {
   .triple-row {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .site-nav {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 560px) {
@@ -363,5 +455,4 @@ input[type="button"] {
   .picker-row {
     flex-wrap: wrap;
   }
-
 }

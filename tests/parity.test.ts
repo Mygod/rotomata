@@ -6,7 +6,10 @@ import {
   renderJudgeHtml,
   renderPvpStatHtml
 } from "../src/lib/pogo/parity";
+import { buildHardRaidEntries } from "../src/lib/pogo/hardraid";
 import { buildPokemonCatalog, normalizeMasterfile } from "../src/lib/pogo/pokedex";
+import { buildPvpbpResult } from "../src/lib/pogo/pvpbp";
+import { analyzeSpinap } from "../src/lib/pogo/spinap";
 
 function referenceCalculateCpMultiplier(level: number): number {
   if (level < 40) {
@@ -435,6 +438,262 @@ function referenceRenderJudgeHtml(input: {
   return inferredLevel + (result || '<span class="bad">Wow what a trash Pokemon plz trade/transfer</span>');
 }
 
+function referenceAnalyzeSpinap(input: {
+  balls: number;
+  lv25: boolean;
+  candyxl: boolean;
+  spinap: boolean;
+  beastBall: boolean;
+  medalValue: number;
+  tradedist: number;
+  megaLevel: number;
+  candyEventThrow: number;
+  thr: number;
+  bcr: number;
+  xlBase: number;
+  curve: boolean;
+  rich: boolean;
+  candyTransfer: number;
+  candyGrazz: number;
+}): {
+  recommendation: string;
+  detailsHtml: string;
+  medalDisplay: string;
+  tradedistDisplay: string;
+  megaDisplay: string;
+  eventCandyThrowDisplay: string;
+} {
+  const medal = 1 + input.medalValue * 0.05;
+  const candyBase = input.candyGrazz + input.candyEventThrow;
+  let candyBonus = input.candyTransfer + input.tradedist + [0, 1, 1, 2][input.megaLevel];
+  if (input.candyxl) {
+    candyBonus +=
+      (3 + input.candyEventThrow) * ((input.lv25 ? 15 : 10) + [0, 0, 10, 25][input.megaLevel]);
+    candyBonus += input.lv25 ? (input.rich ? 50 - 3 * 2 : 37.5) : 25;
+    candyBonus += input.xlBase * 100;
+    candyBonus += [0, 10, 25, 100][input.tradedist];
+  }
+  const candyPinap = Math.floor((input.spinap ? 2.3334 : 2) * candyBase) + candyBonus;
+  const candyGrazz = candyBase + candyBonus;
+  const ball = 1;
+  const pinap = input.spinap ? 1.8 : 1;
+  const grazz = 2.5;
+  const cpmultiplier = input.lv25 ? 0.667934 : 0.5974;
+  const curve = input.curve ? 1.7 : 1;
+  let x = 0;
+  let p = 0;
+  let grazzCount = 0;
+  let pinapStart = -1;
+  let detailsHtml = "";
+  for (let i = 1; i <= input.balls; i += 1) {
+    const rm = input.beastBall ? 20 : 1.05 ** (input.balls - i);
+    const probPinap =
+      1 - (1 - input.bcr / 2 / cpmultiplier) ** (ball * curve * pinap * input.thr * medal * rm);
+    const probGrazz =
+      1 - (1 - input.bcr / 2 / cpmultiplier) ** (ball * curve * grazz * input.thr * medal * rm);
+    const xPinap = probPinap * candyPinap + (1 - probPinap) * x;
+    const xGrazz = probGrazz * candyGrazz + (1 - probGrazz) * x;
+    if (xGrazz >= xPinap) {
+      p += (1 - p) * probGrazz;
+      x = xGrazz;
+      grazzCount = 1 + grazzCount * (1 - probGrazz);
+      detailsHtml += `Ball ${i}: grazz ~ ${xGrazz} candies;\t catch probability ~ ${p}; grazz use ~ ${grazzCount}<br />`;
+    } else {
+      p += (1 - p) * probPinap;
+      x = xPinap;
+      grazzCount = grazzCount * (1 - probPinap);
+      detailsHtml += `Ball ${i}: pinap ~ ${xPinap} candies;\t catch probability ~ ${p}; grazz use ~ ${grazzCount}<br />`;
+      if (pinapStart < 0) {
+        pinapStart = i - 1;
+      }
+    }
+  }
+  return {
+    recommendation: pinapStart >= 0 ? `for last ${pinapStart} balls` : "at all times",
+    detailsHtml,
+    medalDisplay: String(input.medalValue * 0.5),
+    tradedistDisplay: ["N/A", "10km-", "10--100km", "100km+"][input.tradedist],
+    megaDisplay: String(input.megaLevel),
+    eventCandyThrowDisplay: ["None/No event", "Nice", "Great", "Excellent"][input.candyEventThrow]
+  };
+}
+
+function referenceCalculateCpWithCap(
+  stats: BaseStats,
+  a: number,
+  d: number,
+  s: number,
+  lv: number,
+  cap: number
+): string {
+  const result = referenceCalculateCP(stats, a, d, s, lv);
+  return result > cap ? "" : String(result);
+}
+
+function referenceBuildPvpbpResult(
+  input: {
+    stats: BaseStats;
+    statsString: string;
+    cpCap: number;
+    lvCap: number;
+    ivFloor: number;
+    suboptimal: boolean;
+    minCp: number;
+    maxLevel: number;
+    minIv: number;
+    floorAtk: number;
+    floorDef: number;
+    floorSta: number;
+  },
+  detailBaseUrl: URL
+): {
+  rows: Array<Record<string, string>>;
+  atkOptions: string[];
+  defOptions: string[];
+  staOptions: string[];
+  returnedCount: number;
+  totalCount: number;
+} {
+  const allStats: Array<Record<string, unknown>> = [];
+  for (let a = input.ivFloor; a <= 15; a += 1) {
+    for (let d = input.ivFloor; d <= 15; d += 1) {
+      for (let s = input.ivFloor; s <= 15; s += 1) {
+        const currentStat = referenceCalculatePvPStat(input.stats, a, d, s, input.cpCap, input.lvCap);
+        if (currentStat === null) {
+          continue;
+        }
+        currentStat.a = a;
+        currentStat.d = d;
+        currentStat.s = s;
+        currentStat.product = currentStat.atk * currentStat.def * currentStat.sta;
+        for (const other of allStats) {
+          if (referenceStrictlyDominates(other as never, currentStat as never)) {
+            currentStat.rank = null;
+            break;
+          } else if (referenceStrictlyDominates(currentStat as never, other as never)) {
+            other.rank = null;
+          }
+        }
+        allStats.push(currentStat);
+      }
+    }
+  }
+  allStats.sort(
+    (a, b) =>
+      (b.product as number) - (a.product as number) ||
+      (b.atk as number) - (a.atk as number) ||
+      (a.sta as number) - (b.sta as number)
+  );
+  if (!allStats.length) {
+    return {
+      rows: [],
+      atkOptions: [],
+      defOptions: [],
+      staOptions: [],
+      returnedCount: 0,
+      totalCount: 0
+    };
+  }
+  let lastStat: Record<string, unknown> | undefined;
+  let nextRank = 1;
+  let no = 0;
+  for (const stat of allStats) {
+    if (stat.rank !== null) {
+      if (
+        lastStat === undefined ||
+        (stat.product as number) < (lastStat.product as number) ||
+        ((stat.product as number) === (lastStat.product as number) &&
+          (stat.atk as number) < (lastStat.atk as number))
+      ) {
+        lastStat = stat;
+        stat.rank = nextRank;
+      } else {
+        stat.rank = lastStat.rank;
+      }
+      nextRank += 1;
+    } else {
+      stat.rank = `${lastStat?.rank ?? "?"}+`;
+    }
+    stat.no = ++no;
+  }
+  const best = allStats[0].product as number;
+  const worst = (lastStat?.product as number | undefined) ?? best;
+  const atks = new Set<number>();
+  const defs = new Set<number>();
+  const stas = new Set<number>();
+  const rows: Array<Record<string, string>> = [];
+  for (const stat of allStats) {
+    if (
+      (!input.suboptimal && typeof stat.rank !== "number") ||
+      (stat.cp as number) < input.minCp ||
+      (stat.lv as number) > input.maxLevel ||
+      (stat.a as number) < input.minIv ||
+      (stat.d as number) < input.minIv ||
+      (stat.s as number) < input.minIv ||
+      (!(input.floorAtk <= 0) && (stat.atk as number) < input.floorAtk) ||
+      (!(input.floorDef <= 0) && (stat.def as number) < input.floorDef) ||
+      (!(input.floorSta <= 0) && (stat.sta as number) < input.floorSta)
+    ) {
+      continue;
+    }
+    atks.add(stat.atk as number);
+    defs.add(stat.def as number);
+    stas.add(stat.sta as number);
+    const url = new URL(detailBaseUrl.toString());
+    url.searchParams.set("stats", input.statsString);
+    url.searchParams.set("cpcap", String(input.cpCap));
+    if (input.ivFloor) {
+      url.searchParams.set("ivfloor", String(input.ivFloor));
+    }
+    url.searchParams.set("atk", String(stat.a));
+    url.searchParams.set("def", String(stat.d));
+    url.searchParams.set("sta", String(stat.s));
+    url.searchParams.set("lvcap", String(input.lvCap));
+    rows.push({
+      detailHref: url.toString(),
+      iv: `${stat.a}/${stat.d}/${stat.s}`,
+      level: String(stat.lv),
+      cp: String(stat.cp),
+      attack: (stat.atk as number).toFixed(2),
+      defense: (stat.def as number).toFixed(2),
+      hp: String(stat.sta),
+      statProduct: (stat.product as number).toFixed(0),
+      no: String(stat.no),
+      rank: stat.rank === null ? "" : String(stat.rank),
+      nspp:
+        best === worst
+          ? (stat.product as number) === best
+            ? "100.00%"
+            : "-∞"
+          : `${((((stat.product as number) - worst) / (best - worst)) * 100).toFixed(2)}%`,
+      cp20: referenceCalculateCpWithCap(
+        input.stats,
+        stat.a as number,
+        stat.d as number,
+        stat.s as number,
+        20,
+        input.cpCap
+      ),
+      cp25: referenceCalculateCpWithCap(
+        input.stats,
+        stat.a as number,
+        stat.d as number,
+        stat.s as number,
+        25,
+        input.cpCap
+      )
+    });
+  }
+  return {
+    rows,
+    atkOptions: Array.from(atks).sort().map(String),
+    defOptions: Array.from(defs).sort().map(String),
+    staOptions: Array.from(stas).sort().map(String),
+    returnedCount: rows.length,
+    totalCount: allStats.length
+  };
+}
+
 describe("CodePen parity helpers", () => {
   it("matches the original PvP stat page for a representative spread", () => {
     const input = {
@@ -470,26 +729,36 @@ describe("CodePen parity helpers", () => {
       pokemon: {
         "3": {
           name: "Venusaur",
-          attack: 198,
-          defense: 189,
-          stamina: 190,
+          pokedexId: 3,
+          stats: {
+            attack: 198,
+            defense: 189,
+            stamina: 190
+          },
           forms: {
             "169": {
               name: "Clone",
-              attack: 199,
-              defense: 188,
-              stamina: 190
+              form: 169,
+              stats: {
+                attack: 199,
+                defense: 188,
+                stamina: 190
+              }
             }
           },
-          temp_evolutions: {
+          tempEvolutions: {
             "1": {
-              attack: 241,
-              defense: 246,
-              stamina: 190
+              tempEvoId: 1,
+              stats: {
+                attack: 241,
+                defense: 246,
+                stamina: 190
+              }
             }
           }
         }
-      }
+      },
+      types: {}
     });
     expect(entries).toEqual([
       { id: 3, name: "Venusaur", at: 198, df: 189, st: 190 },
@@ -503,73 +772,116 @@ describe("CodePen parity helpers", () => {
       pokemon: {
         "4": {
           name: "Charmander",
-          default_form_id: 172,
-          attack: 116,
-          defense: 93,
-          stamina: 118,
+          pokedexId: 4,
+          defaultFormId: 172,
+          stats: {
+            attack: 116,
+            defense: 93,
+            stamina: 118
+          },
           forms: {
             "172": {
               name: "Normal",
-              evolutions: [{ pokemon: 5, form: 175 }]
+              form: 172,
+              evolutions: {
+                "5": {
+                  pokemon: 5,
+                  form: 175
+                }
+              }
             }
           },
-          evolutions: [{ pokemon: 5, form: 175 }]
+          evolutions: {
+            "5": {
+              pokemon: 5,
+              form: 175
+            }
+          }
         },
         "5": {
           name: "Charmeleon",
-          default_form_id: 175,
-          attack: 158,
-          defense: 126,
-          stamina: 151,
+          pokedexId: 5,
+          defaultFormId: 175,
+          stats: {
+            attack: 158,
+            defense: 126,
+            stamina: 151
+          },
           forms: {
             "175": {
               name: "Normal",
-              evolutions: [{ pokemon: 6, form: 178 }]
+              form: 175,
+              evolutions: {
+                "6": {
+                  pokemon: 6,
+                  form: 178
+                }
+              }
             }
           },
-          evolutions: [{ pokemon: 6, form: 178 }]
+          evolutions: {
+            "6": {
+              pokemon: 6,
+              form: 178
+            }
+          }
         },
         "6": {
           name: "Charizard",
-          default_form_id: 178,
-          attack: 223,
-          defense: 173,
-          stamina: 186,
+          pokedexId: 6,
+          defaultFormId: 178,
+          stats: {
+            attack: 223,
+            defense: 173,
+            stamina: 186
+          },
           forms: {
             "178": {
               name: "Normal",
-              temp_evolutions: {
+              form: 178,
+              tempEvolutions: {
                 "2": {},
                 "3": {}
               }
             }
           },
-          temp_evolutions: {
+          tempEvolutions: {
             "2": {
-              attack: 273,
-              defense: 213,
-              stamina: 186
+              tempEvoId: 2,
+              stats: {
+                attack: 273,
+                defense: 213,
+                stamina: 186
+              }
             },
             "3": {
-              attack: 319,
-              defense: 212,
-              stamina: 186
+              tempEvoId: 3,
+              stats: {
+                attack: 319,
+                defense: 212,
+                stamina: 186
+              }
             }
           }
         },
         "155": {
           name: "Cyndaquil",
-          default_form_id: 924,
-          attack: 116,
-          defense: 93,
-          stamina: 118,
+          pokedexId: 155,
+          defaultFormId: 924,
+          stats: {
+            attack: 116,
+            defense: 93,
+            stamina: 118
+          },
           forms: {
             "924": {
-              name: "Normal"
+              name: "Normal",
+              form: 924
             }
           }
         }
-      }
+      },
+      types: {}
     });
     expect(catalog.judgeEntries.map((entry) => entry.value)).toEqual([
       "#4: Charmander",
@@ -586,5 +898,208 @@ describe("CodePen parity helpers", () => {
       "319/212/186"
     ]);
     expect(catalog.judgeEntries[3].familyStats).toEqual(["116/93/118"]);
+  });
+
+  it("matches the original raid berry recommendation logic for representative inputs", () => {
+    const input = {
+      balls: 24,
+      lv25: false,
+      candyxl: true,
+      spinap: true,
+      beastBall: false,
+      medalValue: 8,
+      tradedist: 3,
+      megaLevel: 3,
+      candyEventThrow: 2,
+      thr: 1.7,
+      bcr: 0.02,
+      xlBase: 3,
+      curve: true,
+      rich: false,
+      candyTransfer: 1,
+      candyGrazz: 3
+    };
+    expect(analyzeSpinap(input)).toEqual(referenceAnalyzeSpinap(input));
+  });
+
+  it("builds the PvP filter table with the same ranking, filtering, and link semantics", () => {
+    const input = {
+      stats: {
+        attack: 141,
+        defense: 201,
+        stamina: 181
+      },
+      statsString: "141/201/181",
+      cpCap: 1500,
+      lvCap: 50,
+      ivFloor: 0,
+      suboptimal: true,
+      minCp: 1490,
+      maxLevel: 50,
+      minIv: 2,
+      floorAtk: 0,
+      floorDef: 0,
+      floorSta: 0
+    };
+    const url = new URL("https://rotomata.mygod.be/pvpstat");
+    expect(buildPvpbpResult(input, url)).toEqual(referenceBuildPvpbpResult(input, url));
+  });
+
+  it("builds hard raid entries from the shared masterfile shape", () => {
+    const entries = buildHardRaidEntries({
+      pokemon: {
+        "373": {
+          name: "Salamence",
+          pokedexId: 373,
+          stats: {
+            attack: 277,
+            defense: 168,
+            stamina: 216
+          },
+          types: {
+            "3": { typeId: 3, typeName: "Flying" },
+            "16": { typeId: 16, typeName: "Dragon" }
+          }
+        },
+        "464": {
+          name: "Rhyperior",
+          pokedexId: 464,
+          stats: {
+            attack: 241,
+            defense: 190,
+            stamina: 251
+          },
+          types: {
+            "5": { typeId: 5, typeName: "Ground" },
+            "6": { typeId: 6, typeName: "Rock" }
+          }
+        },
+        "806": {
+          name: "Blacephalon",
+          pokedexId: 806,
+          ultraBeast: true,
+          stats: {
+            attack: 315,
+            defense: 148,
+            stamina: 142
+          },
+          types: {
+            "8": { typeId: 8, typeName: "Ghost" },
+            "10": { typeId: 10, typeName: "Fire" }
+          }
+        },
+        "6": {
+          name: "Charizard",
+          pokedexId: 6,
+          defaultFormId: 178,
+          stats: {
+            attack: 223,
+            defense: 173,
+            stamina: 186
+          },
+          types: {
+            "3": { typeId: 3, typeName: "Flying" },
+            "10": { typeId: 10, typeName: "Fire" }
+          },
+          forms: {
+            "178": {
+              name: "Normal",
+              form: 178,
+              tempEvolutions: {
+                "2": { tempEvoId: 2 }
+              }
+            }
+          },
+          tempEvolutions: {
+            "2": {
+              tempEvoId: 2,
+              stats: {
+                attack: 273,
+                defense: 213,
+                stamina: 186
+              },
+              types: {
+                "10": { typeId: 10, typeName: "Fire" },
+                "16": { typeId: 16, typeName: "Dragon" }
+              }
+            }
+          }
+        },
+        "1": {
+          name: "Bulbasaur",
+          pokedexId: 1,
+          stats: {
+            attack: 118,
+            defense: 111,
+            stamina: 128
+          },
+          types: {
+            "4": { typeId: 4, typeName: "Poison" },
+            "12": { typeId: 12, typeName: "Grass" }
+          }
+        }
+      },
+      types: {
+        "3": {
+          typeId: 3,
+          typeName: "Flying",
+          weaknesses: [{ typeId: 6, typeName: "Rock" }]
+        },
+        "4": {
+          typeId: 4,
+          typeName: "Poison",
+          weaknesses: [{ typeId: 5, typeName: "Ground" }, { typeId: 14, typeName: "Psychic" }]
+        },
+        "5": {
+          typeId: 5,
+          typeName: "Ground",
+          weaknesses: [{ typeId: 10, typeName: "Water" }, { typeId: 12, typeName: "Grass" }]
+        },
+        "6": {
+          typeId: 6,
+          typeName: "Rock",
+          weaknesses: [
+            { typeId: 2, typeName: "Fighting" },
+            { typeId: 5, typeName: "Ground" },
+            { typeId: 9, typeName: "Steel" },
+            { typeId: 10, typeName: "Water" },
+            { typeId: 12, typeName: "Grass" }
+          ]
+        },
+        "8": {
+          typeId: 8,
+          typeName: "Ghost",
+          weaknesses: [{ typeId: 8, typeName: "Ghost" }, { typeId: 17, typeName: "Dark" }]
+        },
+        "10": {
+          typeId: 10,
+          typeName: "Fire",
+          weaknesses: [{ typeId: 5, typeName: "Ground" }, { typeId: 6, typeName: "Rock" }]
+        },
+        "12": {
+          typeId: 12,
+          typeName: "Grass",
+          weaknesses: [
+            { typeId: 3, typeName: "Flying" },
+            { typeId: 4, typeName: "Poison" },
+            { typeId: 7, typeName: "Bug" },
+            { typeId: 10, typeName: "Fire" },
+            { typeId: 15, typeName: "Ice" }
+          ]
+        },
+        "16": {
+          typeId: 16,
+          typeName: "Dragon",
+          weaknesses: [{ typeId: 15, typeName: "Ice" }, { typeId: 16, typeName: "Dragon" }]
+        }
+      }
+    });
+    expect(entries.map((entry) => `${entry.pokemon}:${entry.form}:${entry.tier}`)).toEqual([
+      "Blacephalon::T5",
+      "Charizard:Mega X:Mega",
+      "Salamence::T3"
+    ]);
+    expect(entries[0].bulk).toBeCloseTo((148 * 0.79 + 15) * 50);
+    expect(entries[2].pokemon).toBe("Salamence");
   });
 });

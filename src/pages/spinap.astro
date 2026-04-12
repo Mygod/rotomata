@@ -1,0 +1,112 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+---
+
+<BaseLayout
+  title="When to use (Silver) Pinap in raids"
+  description="Optimize Golden Razz vs Pinap usage in Pokemon GO raids with the original CodePen candy and catch model."
+>
+  <section class="tool-page">
+    <div class="tool-page-header">
+      <h1>When to use (Silver) Pinap in raids</h1>
+    </div>
+
+    <div class="tool-panel">
+      <form class="tool-form">
+        <label for="balls"># of balls:</label>
+        <input type="text" id="balls" value="24" />
+
+        <label class="checkbox-row" for="lv25">
+          <input type="checkbox" id="lv25" />
+          <span>Weather Boosted</span>
+        </label>
+
+        <label class="checkbox-row" for="candyxl">
+          <input type="checkbox" id="candyxl" />
+          <span>1 XL Candy = 100 Candy</span>
+        </label>
+
+        <label class="checkbox-row" for="spinap">
+          <input type="checkbox" id="spinap" />
+          <span>Use Silver Pinap over Pinap</span>
+        </label>
+
+        <label class="checkbox-row" for="beastball">
+          <input type="checkbox" id="beastball" />
+          <span>Beast Ball</span>
+        </label>
+
+        <label for="medal">Average medal:</label>
+        <div class="range-row">
+          <input type="range" min="0" max="8" value="8" id="medal" />
+          <span id="medal-display">4</span>
+        </div>
+
+        <label for="tradedist">Trade distance:</label>
+        <div class="range-row">
+          <input type="range" min="0" max="3" value="3" id="tradedist" />
+          <span id="tradedist-display">100km+</span>
+        </div>
+
+        <label for="mega">Mega level:</label>
+        <div class="range-row">
+          <input type="range" min="0" max="3" value="3" id="mega" />
+          <span id="mega-display">3</span>
+        </div>
+
+        <label for="event-candythrow">Event (XL) candy bonus for throwing:</label>
+        <div class="range-row">
+          <input type="range" min="0" max="3" value="0" id="event-candythrow" />
+          <span id="event-candythrow-display">None/No event</span>
+        </div>
+
+        <label for="thr">Throw bonus: (1.3+ great, 1.7+ excellent)</label>
+        <input type="text" id="thr" value="1.7" />
+
+        <details class="tool-details">
+          <summary>Less useful settings</summary>
+          <div class="tool-form nested-form">
+            <label for="bcr">Base capture rate:</label>
+            <input type="text" id="bcr" value="0.02" />
+
+            <label for="xlBase">Guaranteed XL candies:</label>
+            <input type="text" id="xlBase" value="3" />
+
+            <label class="checkbox-row" for="curve">
+              <input type="checkbox" id="curve" checked />
+              <span>Curve ball</span>
+            </label>
+
+            <label class="checkbox-row" for="rich">
+              <input type="checkbox" id="rich" />
+              <span>
+                I am rich (power up for better chance at getting an XL candy upon transfer: 8000 dust
+                for every level 25 catch for gaining 6.5 expected candies)
+              </span>
+            </label>
+
+            <label for="candyTransfer">Transfer candy:</label>
+            <input type="text" id="candyTransfer" value="1" />
+
+            <label for="candyGrazz">Base (Golden Razz) candy:</label>
+            <input type="text" id="candyGrazz" value="3" />
+          </div>
+        </details>
+      </form>
+    </div>
+
+    <section class="result-panel">
+      <h2>Results</h2>
+      <p>
+        You should use Golden Razz <span id="result">at all times</span>.<br />
+      </p>
+      <div id="details" class="detail-log"></div>
+    </section>
+  </section>
+
+  <script>
+    import { initSpinapPage } from "../scripts/spinap";
+
+    initSpinapPage();
+  </script>
+</BaseLayout>

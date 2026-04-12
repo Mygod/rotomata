@@ -1,0 +1,41 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+---
+
+<BaseLayout
+  title="Hardest Raid Bosses"
+  description="Browse the highest bulk raid bosses with the exact tiering and weakness adjustments from the original CodePen."
+>
+  <section class="tool-page">
+    <div class="tool-page-header">
+      <h1>Hardest Raid Bosses</h1>
+    </div>
+
+    <section class="result-panel">
+      <div class="tool-table-scroll">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <td>Pokemon</td>
+              <td>Form/Evo</td>
+              <td>Tier</td>
+              <td>Attack</td>
+              <td>Defense</td>
+              <td>Scaled HP/sec</td>
+              <td>Bulk/sec</td>
+            </tr>
+          </thead>
+          <tbody id="result"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <p id="hardraid-data-status" class="data-status">Loading Pokemon data for the table…</p>
+  </section>
+
+  <script>
+    import { initHardRaidPage } from "../scripts/hardraid";
+
+    initHardRaidPage();
+  </script>
+</BaseLayout>

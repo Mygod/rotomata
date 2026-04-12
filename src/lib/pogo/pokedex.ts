@@ -1,3 +1,5 @@
+import { loadMasterfile, type Masterfile, type MasterfileEvolutionRef, type MasterfilePokemon, type MasterfileStats, type MasterfileTempEvolution } from "./masterfile";
+
 export interface PokedexEntry {
   id: number;
   name: string;
@@ -18,40 +20,6 @@ export interface PokemonCatalog {
   judgeEntries: JudgePickerEntry[];
 }
 
-interface EvolutionRef {
-  pokemon: number;
-  form?: number;
-}
-
-interface StatsCarrier {
-  attack?: number;
-  defense?: number;
-  stamina?: number;
-  name?: string;
-}
-
-interface MasterfileForm extends StatsCarrier {
-  is_costume?: boolean;
-  evolutions?: EvolutionRef[];
-  temp_evolutions?: Record<string, StatsCarrier>;
-}
-
-interface MasterfilePokemon extends StatsCarrier {
-  default_form_id?: number;
-  forms?: Record<string, MasterfileForm>;
-  evolutions?: EvolutionRef[];
-  temp_evolutions?: Record<string, StatsCarrier>;
-}
-
-interface Masterfile {
-  pokemon: Record<string, MasterfilePokemon>;
-}
-
-interface CachedCatalog {
-  fetchedAt: number;
-  catalog: PokemonCatalog;
-}
-
 interface JudgeCatalogNode {
   key: string;
   pokemonId: number;
@@ -62,10 +30,6 @@ interface JudgeCatalogNode {
   evolutions: string[];
 }
 
-const MASTERFILE_URL =
-  "https://cdn.jsdelivr.net/gh/WatWowMap/Masterfile-Generator@master/master-latest.json";
-const CACHE_KEY = "rotomata:pokemon-catalog:v2";
-const CACHE_TTL_MS = 6 * 60 * 60 * 1000;
 const TEMP_EVOLUTION_NAMES = ["Unset", "Mega", "Mega X", "Mega Y", "Primal", "Mega Z"];
 
 function getKey(pokemonId: number, formId = 0): string {
@@ -76,15 +40,22 @@ function formatPokemonLabel(pokemonId: number, name: string): string {
   return `#${pokemonId}: ${name}`;
 }
 
-function resolveStats(carrier: StatsCarrier | undefined): string | null {
-  if (!(carrier?.attack && carrier.defense && carrier.stamina)) {
+function resolveStats(carrier: { stats?: MasterfileStats; attack?: number; defense?: number; stamina?: number } | undefined): string | null {
+  const stats = carrier?.stats ?? carrier;
+  if (!(stats?.attack && stats.defense && stats.stamina)) {
     return null;
   }
-  return `${carrier.attack}/${carrier.defense}/${carrier.stamina}`;
+  return `${stats.attack}/${stats.defense}/${stats.stamina}`;
 }
 
-function pushEntry(entries: PokedexEntry[], pokemonId: string, pokemonName: string, stats: StatsCarrier, name: string | null): void {
-  const statsValue = resolveStats(stats);
+function pushEntry(
+  entries: PokedexEntry[],
+  pokemonId: string,
+  pokemonName: string,
+  statsCarrier: { stats?: MasterfileStats; attack?: number; defense?: number; stamina?: number },
+  name: string | null
+): void {
+  const statsValue = resolveStats(statsCarrier);
   if (statsValue === null) {
     return;
   }
@@ -98,6 +69,10 @@ function pushEntry(entries: PokedexEntry[], pokemonId: string, pokemonName: stri
   });
 }
 
+function evolutionRefs(evolutions: Record<string, MasterfileEvolutionRef> | undefined): MasterfileEvolutionRef[] {
+  return Object.values(evolutions ?? {});
+}
+
 export function normalizeMasterfile(masterfile: Masterfile): PokedexEntry[] {
   const entries: PokedexEntry[] = [];
   for (const [pokemonId, pokemon] of Object.entries(masterfile.pokemon)) {
@@ -106,21 +81,32 @@ export function normalizeMasterfile(masterfile: Masterfile): PokedexEntry[] {
     for (const form of Object.values(pokemon.forms ?? {})) {
       pushEntry(entries, pokemonId, pokemonName, form, form.name ?? "undefined");
     }
-    for (const [tempEvolutionId, tempEvolution] of Object.entries(pokemon.temp_evolutions ?? {})) {
+    for (const [tempEvolutionId, tempEvolution] of Object.entries(pokemon.tempEvolutions ?? {})) {
       pushEntry(
         entries,
         pokemonId,
         pokemonName,
         tempEvolution,
-        TEMP_EVOLUTION_NAMES[Number(tempEvolutionId)] ?? tempEvolution.name ?? "undefined"
+        TEMP_EVOLUTION_NAMES[Number(tempEvolutionId)] ?? "undefined"
       );
     }
   }
   return entries;
 }
 
-function isJudgePickerForm(form: MasterfileForm, isDefaultForm: boolean): boolean {
-  if (form.is_costume) {
+function isJudgePickerForm(
+  form: {
+    isCostume?: boolean;
+    stats?: MasterfileStats;
+    attack?: number;
+    defense?: number;
+    stamina?: number;
+    evolutions?: Record<string, MasterfileEvolutionRef>;
+    tempEvolutions?: Record<string, MasterfileTempEvolution>;
+  },
+  isDefaultForm: boolean
+): boolean {
+  if (form.isCostume) {
     return false;
   }
   if (isDefaultForm) {
@@ -128,12 +114,16 @@ function isJudgePickerForm(form: MasterfileForm, isDefaultForm: boolean): boolea
   }
   return Boolean(
     resolveStats(form) ||
-      (form.evolutions && form.evolutions.length) ||
-      (form.temp_evolutions && Object.keys(form.temp_evolutions).length)
+      evolutionRefs(form.evolutions).length ||
+      Object.keys(form.tempEvolutions ?? {}).length
   );
 }
 
-function getFormLabel(pokemonName: string, form: MasterfileForm | undefined, isDefaultForm: boolean): string {
+function getFormLabel(
+  pokemonName: string,
+  form: { name?: string } | undefined,
+  isDefaultForm: boolean
+): string {
   if (!form || isDefaultForm || !form.name || form.name === "Normal") {
     return pokemonName;
   }
@@ -150,10 +140,11 @@ function resolveFormStats(pokemon: MasterfilePokemon, formId: number): string | 
 
 function resolveMegaStats(pokemon: MasterfilePokemon, formId: number): string[] {
   const form = formId ? pokemon.forms?.[String(formId)] : undefined;
-  const tempEvolutions = form?.temp_evolutions ?? pokemon.temp_evolutions ?? {};
+  const tempEvolutions = form?.tempEvolutions ?? pokemon.tempEvolutions ?? {};
   const result: string[] = [];
   for (const [tempEvolutionId, tempEvolution] of Object.entries(tempEvolutions)) {
-    const stats = resolveStats(tempEvolution) ?? resolveStats(pokemon.temp_evolutions?.[tempEvolutionId]);
+    const stats =
+      resolveStats(tempEvolution) ?? resolveStats(pokemon.tempEvolutions?.[tempEvolutionId]);
     if (stats !== null) {
       result.push(stats);
     }
@@ -161,14 +152,14 @@ function resolveMegaStats(pokemon: MasterfilePokemon, formId: number): string[] 
   return result;
 }
 
-function resolveEvolutionRefs(pokemon: MasterfilePokemon, formId: number): EvolutionRef[] {
+function resolveEvolutionRefs(pokemon: MasterfilePokemon, formId: number): MasterfileEvolutionRef[] {
   const form = formId ? pokemon.forms?.[String(formId)] : undefined;
-  return form?.evolutions ?? pokemon.evolutions ?? [];
+  return evolutionRefs(form?.evolutions ?? pokemon.evolutions);
 }
 
 function resolveEntryKey(masterfile: Masterfile, pokemonId: number, formId = 0): string {
   const pokemon = masterfile.pokemon[String(pokemonId)];
-  const defaultFormId = pokemon?.default_form_id ?? 0;
+  const defaultFormId = pokemon?.defaultFormId ?? 0;
   return getKey(pokemonId, formId || defaultFormId);
 }
 
@@ -177,7 +168,7 @@ function buildJudgeNodes(masterfile: Masterfile): JudgeCatalogNode[] {
   for (const [pokemonId, pokemon] of Object.entries(masterfile.pokemon)) {
     const numericId = Number(pokemonId);
     const pokemonName = pokemon.name ?? `Pokemon ${pokemonId}`;
-    const defaultFormId = pokemon.default_form_id ?? 0;
+    const defaultFormId = pokemon.defaultFormId ?? 0;
     const forms = pokemon.forms ?? {};
     if (!Object.keys(forms).length) {
       const stats = resolveStats(pokemon);
@@ -279,69 +270,14 @@ export function buildPokemonCatalog(masterfile: Masterfile): PokemonCatalog {
   };
 }
 
-function readCachedCatalog(): CachedCatalog | null {
-  try {
-    const cachedRaw = localStorage.getItem(CACHE_KEY);
-    if (!cachedRaw) {
-      return null;
-    }
-    const parsed = JSON.parse(cachedRaw) as CachedCatalog;
-    if (!parsed.catalog || !Array.isArray(parsed.catalog.statEntries) || !Array.isArray(parsed.catalog.judgeEntries)) {
-      return null;
-    }
-    return parsed;
-  } catch {
-    return null;
-  }
-}
-
-function writeCachedCatalog(catalog: PokemonCatalog): void {
-  try {
-    const payload: CachedCatalog = {
-      fetchedAt: Date.now(),
-      catalog
-    };
-    localStorage.setItem(CACHE_KEY, JSON.stringify(payload));
-  } catch {
-    // Ignore cache write failures.
-  }
-}
-
-async function fetchPokemonCatalog(): Promise<PokemonCatalog> {
-  const response = await fetch(MASTERFILE_URL, {
-    cache: "no-store"
-  });
-  if (!response.ok) {
-    throw new Error(`Failed to fetch masterfile: ${response.status}`);
-  }
-  const masterfile = (await response.json()) as Masterfile;
-  const catalog = buildPokemonCatalog(masterfile);
-  writeCachedCatalog(catalog);
-  return catalog;
-}
-
 export async function loadPokemonCatalog(
   onRefresh?: (catalog: PokemonCatalog) => void
 ): Promise<{ catalog: PokemonCatalog; source: "cache" | "network" }> {
-  const cached = readCachedCatalog();
-  if (cached) {
-    if (Date.now() - cached.fetchedAt > CACHE_TTL_MS) {
-      void fetchPokemonCatalog()
-        .then((catalog) => {
-          onRefresh?.(catalog);
-        })
-        .catch(() => {
-          // Keep using cached data silently if the refresh fails.
-        });
-    }
-    return {
-      catalog: cached.catalog,
-      source: "cache"
-    };
-  }
-  const catalog = await fetchPokemonCatalog();
+  const loaded = await loadMasterfile((masterfile) => {
+    onRefresh?.(buildPokemonCatalog(masterfile));
+  });
   return {
-    catalog,
-    source: "network"
+    catalog: buildPokemonCatalog(loaded.masterfile),
+    source: loaded.source
   };
 }
