@@ -16,7 +16,7 @@ import BaseLayout from "../layouts/BaseLayout.astro";
 
       <form class="tool-form tool-form-picker" onsubmit="event.preventDefault()">
         <label for="statspicker">Pokemon/Base Stats picker:</label>
-        <div class="inline-cluster">
+        <div class="inline-cluster picker-row">
           <input type="text" id="statspicker" list="pokelist" />
           <input type="submit" id="addstats" value="Add to list" />
         </div>
@@ -24,7 +24,7 @@ import BaseLayout from "../layouts/BaseLayout.astro";
 
       <form class="tool-form">
         <label for="stats">Pokemon/Base Stats list:</label>
-        <input type="text" id="stats" list="pokelist" class="wide-input" />
+        <input type="text" id="stats" list="pokelist" class="wide-input full-row-input" />
 
         <label for="cpcap">CP caps:</label>
         <input type="text" id="cpcap" value="500,1500,2500,50000" />

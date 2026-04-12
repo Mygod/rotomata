@@ -269,6 +269,26 @@ input[type="button"] {
   max-width: 55rem;
 }
 
+.full-row-input {
+  max-width: none;
+  width: 100%;
+}
+
+.picker-row {
+  flex-wrap: nowrap;
+  align-items: stretch;
+}
+
+.picker-row input[type="text"] {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.picker-row input[type="submit"] {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
 .iv {
   width: 3.4rem;
 }
@@ -337,5 +357,9 @@ input[type="button"] {
 
   .triple-row {
     grid-template-columns: 1fr;
+  }
+
+  .picker-row {
+    flex-wrap: nowrap;
   }
 }
