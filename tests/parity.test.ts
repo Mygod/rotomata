@@ -6,7 +6,7 @@ import {
   renderJudgeHtml,
   renderPvpStatHtml
 } from "../src/lib/pogo/parity";
-import { normalizeMasterfile } from "../src/lib/pogo/pokedex";
+import { buildPokemonCatalog, normalizeMasterfile } from "../src/lib/pogo/pokedex";
 
 function referenceCalculateCpMultiplier(level: number): number {
   if (level < 40) {
@@ -496,5 +496,95 @@ describe("CodePen parity helpers", () => {
       { id: 3, name: "Venusaur (Clone)", at: 199, df: 188, st: 190 },
       { id: 3, name: "Venusaur (Mega)", at: 241, df: 246, st: 190 }
     ]);
+  });
+
+  it("builds a Pokemon-aware judge picker and expands evolution families", () => {
+    const catalog = buildPokemonCatalog({
+      pokemon: {
+        "4": {
+          name: "Charmander",
+          default_form_id: 172,
+          attack: 116,
+          defense: 93,
+          stamina: 118,
+          forms: {
+            "172": {
+              name: "Normal",
+              evolutions: [{ pokemon: 5, form: 175 }]
+            }
+          },
+          evolutions: [{ pokemon: 5, form: 175 }]
+        },
+        "5": {
+          name: "Charmeleon",
+          default_form_id: 175,
+          attack: 158,
+          defense: 126,
+          stamina: 151,
+          forms: {
+            "175": {
+              name: "Normal",
+              evolutions: [{ pokemon: 6, form: 178 }]
+            }
+          },
+          evolutions: [{ pokemon: 6, form: 178 }]
+        },
+        "6": {
+          name: "Charizard",
+          default_form_id: 178,
+          attack: 223,
+          defense: 173,
+          stamina: 186,
+          forms: {
+            "178": {
+              name: "Normal",
+              temp_evolutions: {
+                "2": {},
+                "3": {}
+              }
+            }
+          },
+          temp_evolutions: {
+            "2": {
+              attack: 273,
+              defense: 213,
+              stamina: 186
+            },
+            "3": {
+              attack: 319,
+              defense: 212,
+              stamina: 186
+            }
+          }
+        },
+        "155": {
+          name: "Cyndaquil",
+          default_form_id: 924,
+          attack: 116,
+          defense: 93,
+          stamina: 118,
+          forms: {
+            "924": {
+              name: "Normal"
+            }
+          }
+        }
+      }
+    });
+    expect(catalog.judgeEntries.map((entry) => entry.value)).toEqual([
+      "#4: Charmander",
+      "#5: Charmeleon",
+      "#6: Charizard",
+      "#155: Cyndaquil"
+    ]);
+    expect(catalog.judgeEntries[0].stats).toBe("116/93/118");
+    expect(catalog.judgeEntries[0].familyStats).toEqual([
+      "116/93/118",
+      "158/126/151",
+      "223/173/186",
+      "273/213/186",
+      "319/212/186"
+    ]);
+    expect(catalog.judgeEntries[3].familyStats).toEqual(["116/93/118"]);
   });
 });

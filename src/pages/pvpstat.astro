@@ -12,8 +12,6 @@ import BaseLayout from "../layouts/BaseLayout.astro";
     </div>
 
     <div class="tool-panel">
-      <p id="pvpstat-data-status" class="data-status">Loading Pokemon data for the picker…</p>
-
       <form class="tool-form">
         <label for="stats">Pokemon/Base Stats:</label>
         <input type="text" id="stats" list="pokelist" />
@@ -84,6 +82,8 @@ import BaseLayout from "../layouts/BaseLayout.astro";
       <h2>Results</h2>
       <p id="result"></p>
     </section>
+
+    <p id="pvpstat-data-status" class="data-status">Loading Pokemon data for the picker…</p>
   </section>
 
   <script>

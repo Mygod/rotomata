@@ -1,7 +1,7 @@
-import { loadPokedex, type PokedexEntry } from "../lib/pogo/pokedex";
+import { loadPokemonCatalog, type JudgePickerEntry } from "../lib/pogo/pokedex";
 import { calculateCP, findMinLevel, parseStatsList, renderJudgeHtml } from "../lib/pogo/parity";
 
-function populatePokedex(entries: PokedexEntry[]): void {
+function populatePokedex(entries: JudgePickerEntry[]): void {
   const pokelist = document.getElementById("pokelist") as HTMLDataListElement | null;
   if (!pokelist) {
     return;
@@ -9,8 +9,8 @@ function populatePokedex(entries: PokedexEntry[]): void {
   pokelist.replaceChildren();
   for (const poke of entries) {
     const option = document.createElement("option");
-    option.innerText = `#${poke.id}: ${poke.name}`;
-    option.value = `${poke.at}/${poke.df}/${poke.st}`;
+    option.innerText = poke.value;
+    option.value = poke.value;
     pokelist.append(option);
   }
 }
@@ -53,30 +53,13 @@ function work(): void {
   );
 }
 
-async function hydratePokedex(): Promise<void> {
-  setStatus("Loading Pokemon data for the picker…");
-  try {
-    const loaded = await loadPokedex((entries) => {
-      populatePokedex(entries);
-      setStatus("Pokemon data refreshed from upstream.");
-    });
-    populatePokedex(loaded.entries);
-    setStatus(
-      loaded.source === "cache"
-        ? "Using cached Pokemon data. A background refresh will run when needed."
-        : "Pokemon data loaded from upstream."
-    );
-  } catch {
-    setStatus("Pokemon list unavailable. Manual base stats still work.", true);
-  }
-}
-
 export function initJudgePage(): void {
   const run = (): void => {
     const forms = document.getElementsByTagName("form");
     const pickerInput = document.getElementById("statspicker") as HTMLInputElement;
     const statsInput = document.getElementById("stats") as HTMLInputElement;
     const addStatsButton = document.getElementById("addstats");
+    const useFamilyButton = document.getElementById("usefamily");
     const purifyButton = document.getElementById("purify");
     const lvCapsInput = document.getElementById("lvcap") as HTMLInputElement;
     const ivAtkInput = document.getElementById("atk") as HTMLInputElement;
@@ -84,6 +67,14 @@ export function initJudgePage(): void {
     const ivStaInput = document.getElementById("sta") as HTMLInputElement;
     const cpInput = document.getElementById("cp") as HTMLInputElement;
     const params = new URLSearchParams(window.location.search);
+    const judgePickerByValue = new Map<string, JudgePickerEntry>();
+    const applyCatalog = (entries: JudgePickerEntry[]): void => {
+      judgePickerByValue.clear();
+      for (const entry of entries) {
+        judgePickerByValue.set(entry.value, entry);
+      }
+      populatePokedex(entries);
+    };
 
     for (const input of forms[1].getElementsByTagName("input")) {
       const value = params.get(input.id);
@@ -93,9 +84,25 @@ export function initJudgePage(): void {
       input.addEventListener("change", work);
     }
 
-    addStatsButton?.addEventListener("click", () => {
-      statsInput.value += `${statsInput.value ? "," : ""}${pickerInput.value}`;
+    const withSelectedPokemon = (operation: (entry: JudgePickerEntry) => void): void => {
+      const entry = judgePickerByValue.get(pickerInput.value);
+      if (!entry) {
+        return;
+      }
+      operation(entry);
       work();
+    };
+
+    addStatsButton?.addEventListener("click", () => {
+      withSelectedPokemon((entry) => {
+        statsInput.value += `${statsInput.value ? "," : ""}${entry.stats}`;
+      });
+    });
+
+    useFamilyButton?.addEventListener("click", () => {
+      withSelectedPokemon((entry) => {
+        statsInput.value = entry.familyStats.join(",");
+      });
     });
 
     purifyButton?.addEventListener("click", () => {
@@ -128,7 +135,22 @@ export function initJudgePage(): void {
       work();
     });
 
-    void hydratePokedex();
+    setStatus("Loading Pokemon data for the picker…");
+    void loadPokemonCatalog((catalog) => {
+      applyCatalog(catalog.judgeEntries);
+      setStatus("Pokemon data refreshed from upstream.");
+    })
+      .then((loaded) => {
+        applyCatalog(loaded.catalog.judgeEntries);
+        setStatus(
+          loaded.source === "cache"
+            ? "Using cached Pokemon data. A background refresh will run when needed."
+            : "Pokemon data loaded from upstream."
+        );
+      })
+      .catch(() => {
+        setStatus("Pokemon list unavailable. Manual base stats still work.", true);
+      });
     work();
   };
 

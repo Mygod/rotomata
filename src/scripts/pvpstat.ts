@@ -1,4 +1,4 @@
-import { loadPokedex, type PokedexEntry } from "../lib/pogo/pokedex";
+import { loadPokemonCatalog, type PokedexEntry } from "../lib/pogo/pokedex";
 import { parseStatsTriple, renderPvpStatHtml } from "../lib/pogo/parity";
 
 function populatePokedex(entries: PokedexEntry[]): void {
@@ -50,11 +50,11 @@ function work(): void {
 async function hydratePokedex(): Promise<void> {
   setStatus("Loading Pokemon data for the picker…");
   try {
-    const loaded = await loadPokedex((entries) => {
-      populatePokedex(entries);
+    const loaded = await loadPokemonCatalog((catalog) => {
+      populatePokedex(catalog.statEntries);
       setStatus("Pokemon data refreshed from upstream.");
     });
-    populatePokedex(loaded.entries);
+    populatePokedex(loaded.catalog.statEntries);
     setStatus(
       loaded.source === "cache"
         ? "Using cached Pokemon data. A background refresh will run when needed."

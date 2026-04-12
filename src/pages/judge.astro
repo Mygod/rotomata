@@ -12,13 +12,17 @@ import BaseLayout from "../layouts/BaseLayout.astro";
     </div>
 
     <div class="tool-panel">
-      <p id="judge-data-status" class="data-status">Loading Pokemon data for the picker…</p>
-
       <form class="tool-form tool-form-picker" onsubmit="event.preventDefault()">
-        <label for="statspicker">Pokemon/Base Stats picker:</label>
+        <label for="statspicker">Pokemon picker:</label>
         <div class="inline-cluster picker-row">
           <input type="text" id="statspicker" list="pokelist" />
           <input type="submit" id="addstats" value="Add to list" />
+          <input
+            type="button"
+            id="usefamily"
+            value="Set list to family"
+            title="Overwrite the list with the selected Pokemon and its evolutions/mega"
+          />
         </div>
       </form>
 
@@ -85,6 +89,8 @@ import BaseLayout from "../layouts/BaseLayout.astro";
       <h2>Results</h2>
       <p id="result"></p>
     </section>
+
+    <p id="judge-data-status" class="data-status">Loading Pokemon data for the picker…</p>
   </section>
 
   <script>
