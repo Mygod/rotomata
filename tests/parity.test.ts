@@ -1,7 +1,10 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   CP_MULTIPLIERS,
+  clearJudgeRankCacheForTests,
+  getJudgeRankCacheBuildCountForTests,
+  getJudgeRankCacheKeysForTests,
   type BaseStats,
   renderJudgeHtml,
   renderPvpStatHtml
@@ -10,6 +13,11 @@ import { buildHardRaidEntries } from "../src/lib/pogo/hardraid";
 import { buildPokemonCatalog, normalizeMasterfile } from "../src/lib/pogo/pokedex";
 import { buildPvpbpResult } from "../src/lib/pogo/pvpbp";
 import { analyzeSpinap } from "../src/lib/pogo/spinap";
+
+afterEach(() => {
+  vi.useRealTimers();
+  clearJudgeRankCacheForTests();
+});
 
 function referenceCalculateCpMultiplier(level: number): number {
   if (level < 40) {
@@ -722,6 +730,123 @@ describe("CodePen parity helpers", () => {
     };
     const url = new URL("https://rotomata.mygod.be/pvpstat");
     expect(renderJudgeHtml(input, url)).toBe(referenceRenderJudgeHtml(input, url));
+  });
+
+  it("reuses cached judge rank tables across IV and CP edits", () => {
+    const stats = { attack: 141, defense: 201, stamina: 181 };
+    const url = new URL("https://rotomata.mygod.be/pvpstat");
+
+    renderJudgeHtml(
+      {
+        statsList: [stats],
+        cpCaps: [1500, 2500],
+        lvCaps: [50],
+        ivFloor: 0,
+        ivAtk: 2,
+        ivDef: 4,
+        ivSta: 7,
+        currentCp: 1000
+      },
+      url
+    );
+
+    expect(getJudgeRankCacheKeysForTests()).toEqual(["141/201/181|1500|50|0", "141/201/181|2500|50|0"]);
+    expect(getJudgeRankCacheBuildCountForTests()).toBe(2);
+
+    renderJudgeHtml(
+      {
+        statsList: [stats],
+        cpCaps: [1500, 2500],
+        lvCaps: [50],
+        ivFloor: 0,
+        ivAtk: 10,
+        ivDef: 10,
+        ivSta: 10,
+        currentCp: 1499
+      },
+      url
+    );
+
+    expect(getJudgeRankCacheKeysForTests()).toEqual(["141/201/181|1500|50|0", "141/201/181|2500|50|0"]);
+    expect(getJudgeRankCacheBuildCountForTests()).toBe(2);
+  });
+
+  it("evicts inactive judge rank tables when the active cap set changes", () => {
+    const stats = { attack: 141, defense: 201, stamina: 181 };
+    const url = new URL("https://rotomata.mygod.be/pvpstat");
+
+    renderJudgeHtml(
+      {
+        statsList: [stats],
+        cpCaps: [1500, 2500],
+        lvCaps: [50],
+        ivFloor: 0,
+        ivAtk: 2,
+        ivDef: 4,
+        ivSta: 7,
+        currentCp: 1000
+      },
+      url
+    );
+
+    renderJudgeHtml(
+      {
+        statsList: [stats],
+        cpCaps: [1500],
+        lvCaps: [50],
+        ivFloor: 0,
+        ivAtk: 2,
+        ivDef: 4,
+        ivSta: 7,
+        currentCp: 1000
+      },
+      url
+    );
+
+    expect(getJudgeRankCacheKeysForTests()).toEqual(["141/201/181|1500|50|0"]);
+    expect(getJudgeRankCacheBuildCountForTests()).toBe(2);
+  });
+
+  it("expires judge rank tables after ten minutes", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-04-17T12:00:00Z"));
+    const stats = { attack: 141, defense: 201, stamina: 181 };
+    const url = new URL("https://rotomata.mygod.be/pvpstat");
+
+    renderJudgeHtml(
+      {
+        statsList: [stats],
+        cpCaps: [1500],
+        lvCaps: [50],
+        ivFloor: 0,
+        ivAtk: 2,
+        ivDef: 4,
+        ivSta: 7,
+        currentCp: 1000
+      },
+      url
+    );
+
+    expect(getJudgeRankCacheBuildCountForTests()).toBe(1);
+
+    vi.advanceTimersByTime(10 * 60 * 1000 + 1);
+
+    renderJudgeHtml(
+      {
+        statsList: [stats],
+        cpCaps: [1500],
+        lvCaps: [50],
+        ivFloor: 0,
+        ivAtk: 2,
+        ivDef: 4,
+        ivSta: 7,
+        currentCp: 1000
+      },
+      url
+    );
+
+    expect(getJudgeRankCacheKeysForTests()).toEqual(["141/201/181|1500|50|0"]);
+    expect(getJudgeRankCacheBuildCountForTests()).toBe(2);
   });
 
   it("normalizes masterfile data into the same picker shape as pokedex.js", () => {

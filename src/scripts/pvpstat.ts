@@ -97,14 +97,15 @@ export function initPvpStatPage(): void {
         updateUrl();
       }
     };
+    form.addEventListener("submit", (event) => {
+      event.preventDefault();
+      sync();
+    });
     for (const input of form.getElementsByTagName("input")) {
       const value = params.get(input.id);
       if (value !== null) {
         input.value = value;
       }
-      input.addEventListener("input", () => {
-        sync();
-      });
       input.addEventListener("change", () => {
         sync();
       });

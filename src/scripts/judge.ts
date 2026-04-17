@@ -93,6 +93,7 @@ function work(): void {
 export function initJudgePage(): void {
   const run = (): void => {
     const forms = document.getElementsByTagName("form");
+    const judgeForm = forms[1];
     const pickerInput = document.getElementById("statspicker") as HTMLInputElement;
     const statsInput = document.getElementById("stats") as HTMLInputElement;
     const addStatsButton = document.getElementById("addstats");
@@ -121,7 +122,12 @@ export function initJudgePage(): void {
       }
     };
 
-    for (const input of forms[1].getElementsByTagName("input")) {
+    judgeForm?.addEventListener("submit", (event) => {
+      event.preventDefault();
+      sync();
+    });
+
+    for (const input of judgeForm.getElementsByTagName("input")) {
       const value = params.get(input.id);
       if (value !== null) {
         input.value = value;
@@ -129,9 +135,6 @@ export function initJudgePage(): void {
       if (input.type === "button") {
         continue;
       }
-      input.addEventListener("input", () => {
-        sync();
-      });
       input.addEventListener("change", () => {
         sync();
       });

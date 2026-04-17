@@ -71,6 +71,21 @@ interface JudgeEntry {
   lvCapDisplay: string;
 }
 
+interface JudgeRankTable {
+  viableStats: RankedStat[];
+  rankByIv: Map<string, number>;
+  maxRank: number;
+}
+
+interface JudgeRankCacheEntry {
+  table: JudgeRankTable;
+  lastAccessedAt: number;
+}
+
+const JUDGE_RANK_CACHE_TTL_MS = 10 * 60 * 1000;
+const judgeRankCache = new Map<string, JudgeRankCacheEntry>();
+let judgeRankCacheBuildCount = 0;
+
 export const CP_MULTIPLIERS: Record<string, number> = {
   "1": 0.0939999967813492,
   "1.5": 0.135137432089339,
@@ -306,6 +321,133 @@ function calculateStyle(
   return `${result}"`;
 }
 
+function formatStatsKey(stats: BaseStats): string {
+  return `${stats.attack}/${stats.defense}/${stats.stamina}`;
+}
+
+function formatIvKey(attack: number, defense: number, stamina: number): string {
+  return `${attack}/${defense}/${stamina}`;
+}
+
+function formatJudgeRankCacheKey(stats: BaseStats, ivFloor: number, cpCap: number, lvCap: number): string {
+  return `${formatStatsKey(stats)}|${cpCap}|${lvCap}|${ivFloor}`;
+}
+
+function pruneJudgeRankCache(activeKeys?: ReadonlySet<string>): void {
+  const now = Date.now();
+  for (const [key, entry] of judgeRankCache) {
+    if (now - entry.lastAccessedAt > JUDGE_RANK_CACHE_TTL_MS || (activeKeys && !activeKeys.has(key))) {
+      judgeRankCache.delete(key);
+    }
+  }
+}
+
+function buildJudgeRankTable(stats: BaseStats, ivFloor: number, cpCap: number, lvCap: number): JudgeRankTable {
+  const viableStats: RankedStat[] = [];
+  for (let a = ivFloor; a <= 15; a += 1) {
+    for (let d = ivFloor; d <= 15; d += 1) {
+      for (let s = ivFloor; s <= 15; s += 1) {
+        const currentStat = calculatePvPStat(stats, a, d, s, cpCap, lvCap);
+        if (currentStat === null) {
+          continue;
+        }
+        const rankedStat: RankedStat = {
+          ...currentStat,
+          a,
+          d,
+          s,
+          product: currentStat.atk * currentStat.def * currentStat.sta
+        };
+        let dominated = false;
+        for (let index = viableStats.length - 1; index >= 0; index -= 1) {
+          const other = viableStats[index];
+          if (strictlyDominates(other, rankedStat)) {
+            dominated = true;
+            break;
+          }
+          if (strictlyDominates(rankedStat, other)) {
+            viableStats.splice(index, 1);
+          }
+        }
+        if (!dominated) {
+          viableStats.push(rankedStat);
+        }
+      }
+    }
+  }
+  viableStats.sort((a, b) => b.product - a.product || b.atk - a.atk || a.sta - b.sta);
+  let lastStat: RankedStat | undefined;
+  let nextRank = 1;
+  const rankByIv = new Map<string, number>();
+  for (const stat of viableStats) {
+    if (
+      lastStat === undefined ||
+      stat.product < lastStat.product ||
+      (stat.product === lastStat.product && stat.atk < lastStat.atk)
+    ) {
+      lastStat = stat;
+      stat.rank = nextRank;
+    } else {
+      stat.rank = lastStat.rank;
+    }
+    nextRank += 1;
+    rankByIv.set(formatIvKey(stat.a, stat.d, stat.s), stat.rank as number);
+  }
+  return {
+    viableStats,
+    rankByIv,
+    maxRank: (lastStat?.rank as number | undefined) ?? 0
+  };
+}
+
+function getJudgeRankTable(stats: BaseStats, ivFloor: number, cpCap: number, lvCap: number): JudgeRankTable {
+  pruneJudgeRankCache();
+  const key = formatJudgeRankCacheKey(stats, ivFloor, cpCap, lvCap);
+  const existing = judgeRankCache.get(key);
+  if (existing) {
+    existing.lastAccessedAt = Date.now();
+    return existing.table;
+  }
+  const table = buildJudgeRankTable(stats, ivFloor, cpCap, lvCap);
+  judgeRankCacheBuildCount += 1;
+  judgeRankCache.set(key, {
+    table,
+    lastAccessedAt: Date.now()
+  });
+  return table;
+}
+
+function retainJudgeRankCache(input: JudgeInput): void {
+  const activeKeys = new Set<string>();
+  const uniqueStats = new Map<string, BaseStats>();
+  for (const stats of input.statsList) {
+    uniqueStats.set(formatStatsKey(stats), stats);
+  }
+  const uniqueCpCaps = Array.from(new Set(input.cpCaps));
+  const uniqueLvCaps = Array.from(new Set(input.lvCaps));
+  for (const stats of uniqueStats.values()) {
+    for (const cpCap of uniqueCpCaps) {
+      for (const lvCap of uniqueLvCaps) {
+        activeKeys.add(formatJudgeRankCacheKey(stats, input.ivFloor, cpCap, lvCap));
+      }
+    }
+  }
+  pruneJudgeRankCache(activeKeys);
+}
+
+export function clearJudgeRankCacheForTests(): void {
+  judgeRankCache.clear();
+  judgeRankCacheBuildCount = 0;
+}
+
+export function getJudgeRankCacheKeysForTests(): string[] {
+  return Array.from(judgeRankCache.keys()).sort();
+}
+
+export function getJudgeRankCacheBuildCountForTests(): number {
+  return judgeRankCacheBuildCount;
+}
+
 function parseRankedStats(
   stats: BaseStats,
   ivFloor: number,
@@ -488,74 +630,22 @@ function createJudgeEntry(
     s: ivSta,
     product: mineBase.atk * mineBase.def * mineBase.sta
   };
-  const allStats: RankedStat[] = [];
-  for (let a = ivFloor; a <= 15; a += 1) {
-    for (let d = ivFloor; d <= 15; d += 1) {
-      for (let s = ivFloor; s <= 15; s += 1) {
-        const currentStat = calculatePvPStat(stats, a, d, s, cpCap, lvCap);
-        if (currentStat === null) {
-          continue;
-        }
-        const rankedStat: RankedStat = {
-          ...currentStat,
-          a,
-          d,
-          s,
-          product: currentStat.atk * currentStat.def * currentStat.sta
-        };
-        if (strictlyDominates(rankedStat, mine)) {
-          return null;
-        }
-        if (
-          allStats.some((other) => {
-            if (strictlyDominates(other, rankedStat)) {
-              return true;
-            }
-            if (strictlyDominates(rankedStat, other)) {
-              other.rank = null;
-            }
-            return false;
-          })
-        ) {
-          continue;
-        }
-        allStats.push(rankedStat);
-      }
-    }
+  const table = getJudgeRankTable(stats, ivFloor, cpCap, lvCap);
+  if (table.maxRank <= 0) {
+    return null;
   }
-  allStats.sort((a, b) => b.product - a.product || b.atk - a.atk || a.sta - b.sta);
-  let lastStat: RankedStat | undefined;
-  let nextRank = 1;
-  let myRank: number | string = "?";
-  for (const stat of allStats) {
-    if (stat.rank !== null) {
-      if (
-        lastStat === undefined ||
-        stat.product < lastStat.product ||
-        (stat.product === lastStat.product && stat.atk < lastStat.atk)
-      ) {
-        lastStat = stat;
-        stat.rank = nextRank;
-      } else {
-        stat.rank = lastStat.rank;
-      }
-      nextRank += 1;
-      if (stat.atk === mine.atk && stat.def === mine.def && stat.sta === mine.sta) {
-        myRank = stat.rank ?? "?";
-      }
-    } else if (stat.atk === mine.atk && stat.def === mine.def && stat.sta === mine.sta) {
+  for (const stat of table.viableStats) {
+    if (strictlyDominates(stat, mine)) {
       return null;
     }
   }
-  if (lastStat === undefined) {
-    return null;
-  }
+  const myRank = table.rankByIv.get(formatIvKey(ivAtk, ivDef, ivSta)) ?? "?";
   const lvCapDisplay = calculateCP(stats, 0, 0, 0, lvCap + 0.5) > cpCap ? "" : `/${lvCap}`;
   return {
     stats,
     mine,
     myRank,
-    maxRank: lastStat.rank as number,
+    maxRank: table.maxRank,
     cpCap,
     lvCapDisplay
   };
@@ -578,6 +668,7 @@ export function renderPvpStatHtml(input: PvpStatInput): string {
 }
 
 export function renderJudgeHtml(input: JudgeInput, pvpStatUrl: URL): string {
+  retainJudgeRankCache(input);
   const lvCapMax = Math.max(...input.lvCaps);
   let inferredLevel = "Unable to infer current level<br />";
   let currentLevel = lvCapMax + 1;
