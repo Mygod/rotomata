@@ -1,4 +1,4 @@
-import { loadMasterfile, type Masterfile, type MasterfileEvolutionRef, type MasterfilePokemon, type MasterfileStats, type MasterfileTempEvolution } from "./masterfile";
+import { loadMasterfile, type Masterfile, type MasterfileEvolutionRef, type MasterfileFormChange, type MasterfilePokemon, type MasterfileStats, type MasterfileTempEvolution } from "./masterfile";
 
 export interface PokedexEntry {
   id: number;
@@ -28,6 +28,7 @@ interface JudgeCatalogNode {
   stats: string;
   megaStats: string[];
   evolutions: string[];
+  formChanges: string[];
 }
 
 const TEMP_EVOLUTION_NAMES = ["Unset", "Mega", "Mega X", "Mega Y", "Primal", "Mega Z"];
@@ -73,6 +74,21 @@ function evolutionRefs(evolutions: Record<string, MasterfileEvolutionRef> | unde
   return Object.values(evolutions ?? {});
 }
 
+function formChangeTargetFormIds(formChanges: MasterfileFormChange[] | undefined): number[] {
+  const targetFormIds = new Set<number>();
+  for (const formChange of formChanges ?? []) {
+    for (const formId of formChange.availableForms ?? []) {
+      targetFormIds.add(formId);
+    }
+    for (const attribute of formChange.formChangeBonusAttributes ?? []) {
+      if (attribute.targetForm !== undefined) {
+        targetFormIds.add(attribute.targetForm);
+      }
+    }
+  }
+  return Array.from(targetFormIds);
+}
+
 export function normalizeMasterfile(masterfile: Masterfile): PokedexEntry[] {
   const entries: PokedexEntry[] = [];
   for (const [pokemonId, pokemon] of Object.entries(masterfile.pokemon)) {
@@ -101,6 +117,7 @@ function isJudgePickerForm(
     attack?: number;
     defense?: number;
     stamina?: number;
+    formChanges?: MasterfileFormChange[];
     evolutions?: Record<string, MasterfileEvolutionRef>;
     tempEvolutions?: Record<string, MasterfileTempEvolution>;
   },
@@ -114,8 +131,9 @@ function isJudgePickerForm(
   }
   return Boolean(
     resolveStats(form) ||
-      evolutionRefs(form.evolutions).length ||
-      Object.keys(form.tempEvolutions ?? {}).length
+    formChangeTargetFormIds(form.formChanges).length ||
+    evolutionRefs(form.evolutions).length ||
+    Object.keys(form.tempEvolutions ?? {}).length
   );
 }
 
@@ -157,6 +175,15 @@ function resolveEvolutionRefs(pokemon: MasterfilePokemon, formId: number): Maste
   return evolutionRefs(form?.evolutions ?? pokemon.evolutions);
 }
 
+function resolveFormChangeTargetKeys(masterfile: Masterfile, pokemon: MasterfilePokemon, formId: number): string[] {
+  const form = formId ? pokemon.forms?.[String(formId)] : undefined;
+  const isDefaultForm = formId === (pokemon.defaultFormId ?? 0);
+  const formChanges = form?.formChanges ?? (isDefaultForm ? pokemon.formChanges : undefined);
+  return formChangeTargetFormIds(formChanges).map((targetFormId) =>
+    resolveEntryKey(masterfile, pokemon.pokedexId, targetFormId)
+  );
+}
+
 function resolveEntryKey(masterfile: Masterfile, pokemonId: number, formId = 0): string {
   const pokemon = masterfile.pokemon[String(pokemonId)];
   const defaultFormId = pokemon?.defaultFormId ?? 0;
@@ -180,7 +207,8 @@ function buildJudgeNodes(masterfile: Masterfile): JudgeCatalogNode[] {
           value: formatPokemonLabel(numericId, pokemonName),
           stats,
           megaStats: resolveMegaStats(pokemon, 0),
-          evolutions: []
+          evolutions: [],
+          formChanges: []
         });
       }
       continue;
@@ -202,7 +230,8 @@ function buildJudgeNodes(masterfile: Masterfile): JudgeCatalogNode[] {
         value: formatPokemonLabel(numericId, getFormLabel(pokemonName, form, isDefaultForm)),
         stats,
         megaStats: resolveMegaStats(pokemon, numericFormId),
-        evolutions: []
+        evolutions: [],
+        formChanges: []
       });
     }
   }
@@ -213,6 +242,11 @@ function buildJudgeNodes(masterfile: Masterfile): JudgeCatalogNode[] {
       const key = resolveEntryKey(masterfile, evolution.pokemon, evolution.form ?? 0);
       if (nodeByKey[key]) {
         node.evolutions.push(key);
+      }
+    }
+    for (const formChangeKey of resolveFormChangeTargetKeys(masterfile, pokemon, node.formId)) {
+      if (nodeByKey[formChangeKey] && !node.formChanges.includes(formChangeKey)) {
+        node.formChanges.push(formChangeKey);
       }
     }
   }
@@ -249,6 +283,9 @@ function collectFamilyStats(
   for (const evolutionKey of node.evolutions) {
     collectFamilyStats(evolutionKey, nodeByKey, visitedNodes, seenStats, result);
   }
+  for (const formChangeKey of node.formChanges) {
+    collectFamilyStats(formChangeKey, nodeByKey, visitedNodes, seenStats, result);
+  }
 }
 
 export function buildPokemonCatalog(masterfile: Masterfile): PokemonCatalog {
@@ -271,13 +308,6 @@ export function buildPokemonCatalog(masterfile: Masterfile): PokemonCatalog {
 }
 
 export async function loadPokemonCatalog(
-  onRefresh?: (catalog: PokemonCatalog) => void
-): Promise<{ catalog: PokemonCatalog; source: "cache" | "network" }> {
-  const loaded = await loadMasterfile((masterfile) => {
-    onRefresh?.(buildPokemonCatalog(masterfile));
-  });
-  return {
-    catalog: buildPokemonCatalog(loaded.masterfile),
-    source: loaded.source
-  };
+): Promise<PokemonCatalog> {
+  return buildPokemonCatalog(await loadMasterfile());
 }

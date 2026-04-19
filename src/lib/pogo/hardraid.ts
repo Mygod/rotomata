@@ -141,13 +141,6 @@ export function buildHardRaidEntries(masterfile: Masterfile): HardRaidEntry[] {
 }
 
 export async function loadHardRaidEntries(
-  onRefresh?: (entries: HardRaidEntry[]) => void
-): Promise<{ entries: HardRaidEntry[]; source: "cache" | "network" }> {
-  const loaded = await loadMasterfile((masterfile) => {
-    onRefresh?.(buildHardRaidEntries(masterfile));
-  });
-  return {
-    entries: buildHardRaidEntries(loaded.masterfile),
-    source: loaded.source
-  };
+): Promise<HardRaidEntry[]> {
+  return buildHardRaidEntries(await loadMasterfile());
 }

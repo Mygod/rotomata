@@ -72,16 +72,9 @@ function work(): void {
 async function hydratePokedex(): Promise<void> {
   setStatus("Loading Pokemon data for the picker…");
   try {
-    const loaded = await loadPokemonCatalog((catalog) => {
-      populatePokedex(catalog.statEntries);
-      setStatus("Pokemon data refreshed from upstream.");
-    });
-    populatePokedex(loaded.catalog.statEntries);
-    setStatus(
-      loaded.source === "cache"
-        ? "Using cached Pokemon data. A background refresh will run when needed."
-        : "Pokemon data loaded from upstream."
-    );
+    const catalog = await loadPokemonCatalog();
+    populatePokedex(catalog.statEntries);
+    setStatus("Pokemon data loaded.");
   } catch {
     setStatus("Pokemon list unavailable. Manual base stats still work.", true);
   }

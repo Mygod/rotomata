@@ -219,29 +219,16 @@ export function initPvpdpsPage(): void {
     });
 
     setStatus("Loading Pokemon data for the table…");
-    void loadMasterfile((refreshedMasterfile) => {
-      masterfile = refreshedMasterfile;
-      presets = listDoubleWeaknessPresets(refreshedMasterfile);
-      populateTypeSelect(refreshedMasterfile, "type1");
-      populateTypeSelect(refreshedMasterfile, "type2");
-      populateDoubleWeaknessSelect(presets);
-      syncDoubleWeaknessSelect();
-      recomputeRows();
-      setStatus("Pokemon data refreshed from upstream.");
-    })
-      .then((loaded) => {
-        masterfile = loaded.masterfile;
-        presets = listDoubleWeaknessPresets(loaded.masterfile);
-        populateTypeSelect(loaded.masterfile, "type1");
-        populateTypeSelect(loaded.masterfile, "type2");
+    void loadMasterfile()
+      .then((loadedMasterfile) => {
+        masterfile = loadedMasterfile;
+        presets = listDoubleWeaknessPresets(loadedMasterfile);
+        populateTypeSelect(loadedMasterfile, "type1");
+        populateTypeSelect(loadedMasterfile, "type2");
         populateDoubleWeaknessSelect(presets);
         syncDoubleWeaknessSelect();
         recomputeRows();
-        setStatus(
-          loaded.source === "cache"
-            ? "Using cached Pokemon data. A background refresh will run when needed."
-            : "Pokemon data loaded from upstream."
-        );
+        setStatus("Pokemon data loaded.");
       })
       .catch(() => {
         setStatus("Pokemon data unavailable. Results cannot be generated.", true);

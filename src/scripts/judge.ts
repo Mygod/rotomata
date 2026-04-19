@@ -217,17 +217,10 @@ export function initJudgePage(): void {
     });
 
     setStatus("Loading Pokemon data for the picker…");
-    void loadPokemonCatalog((catalog) => {
-      applyCatalog(catalog.judgeEntries, catalog.statEntries);
-      setStatus("Pokemon data refreshed from upstream.");
-    })
-      .then((loaded) => {
-        applyCatalog(loaded.catalog.judgeEntries, loaded.catalog.statEntries);
-        setStatus(
-          loaded.source === "cache"
-            ? "Using cached Pokemon data. A background refresh will run when needed."
-            : "Pokemon data loaded from upstream."
-        );
+    void loadPokemonCatalog()
+      .then((catalog) => {
+        applyCatalog(catalog.judgeEntries, catalog.statEntries);
+        setStatus("Pokemon data loaded.");
       })
       .catch(() => {
         setStatus("Pokemon list unavailable. Manual base stats still work.", true);

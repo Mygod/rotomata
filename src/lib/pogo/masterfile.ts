@@ -29,6 +29,22 @@ export interface MasterfileTempEvolution {
   types?: Record<string, MasterfileTypeRef>;
 }
 
+export interface MasterfileFormChangeBonusAttribute {
+  targetForm?: number;
+}
+
+export interface MasterfileFormChangeComponentPokemonSettings {
+  pokedexId?: number;
+  formId?: number;
+  formChangeType?: string;
+}
+
+export interface MasterfileFormChange {
+  availableForms?: number[];
+  componentPokemonSettings?: MasterfileFormChangeComponentPokemonSettings;
+  formChangeBonusAttributes?: MasterfileFormChangeBonusAttribute[];
+}
+
 export interface MasterfileForm {
   name?: string;
   form?: number;
@@ -39,6 +55,7 @@ export interface MasterfileForm {
   chargedMoves?: number[];
   eliteQuickMoves?: number[];
   eliteChargedMoves?: number[];
+  formChanges?: MasterfileFormChange[];
   evolutions?: Record<string, MasterfileEvolutionRef>;
   tempEvolutions?: Record<string, MasterfileTempEvolution>;
   purificationDust?: number;
@@ -54,6 +71,7 @@ export interface MasterfilePokemon {
   chargedMoves?: number[];
   eliteQuickMoves?: number[];
   eliteChargedMoves?: number[];
+  formChanges?: MasterfileFormChange[];
   forms?: Record<string, MasterfileForm>;
   evolutions?: Record<string, MasterfileEvolutionRef>;
   tempEvolutions?: Record<string, MasterfileTempEvolution>;
@@ -88,11 +106,6 @@ export interface Masterfile {
   moves: Record<string, MasterfileMove>;
 }
 
-interface CachedMasterfile {
-  fetchedAt: number;
-  masterfile: Masterfile;
-}
-
 interface EliteChargedMovePatch {
   pokemonId: number;
   formId?: number;
@@ -100,9 +113,7 @@ interface EliteChargedMovePatch {
 }
 
 const MASTERFILE_URL =
-  "https://cdn.jsdelivr.net/gh/WatWowMap/Masterfile-Generator@master/master-latest-rotomata.json";
-const CACHE_KEY = "rotomata:masterfile:rotomata:v2";
-const CACHE_TTL_MS = 6 * 60 * 60 * 1000;
+  "https://raw.githubusercontent.com/WatWowMap/Masterfile-Generator/master/master-latest-rotomata.json";
 
 const ELITE_CHARGED_MOVE_PATCHES: EliteChargedMovePatch[] = [
   { pokemonId: 384, moveIds: [384] },
@@ -149,48 +160,18 @@ export function applyMasterfilePatches(masterfile: Masterfile): Masterfile {
   return masterfile;
 }
 
-function readCachedMasterfile(): CachedMasterfile | null {
-  try {
-    const cachedRaw = localStorage.getItem(CACHE_KEY);
-    if (!cachedRaw) {
-      return null;
-    }
-    const parsed = JSON.parse(cachedRaw) as CachedMasterfile;
-    if (!parsed.masterfile?.pokemon || !parsed.masterfile?.types || !parsed.masterfile?.moves) {
-      return null;
-    }
-    parsed.masterfile = applyMasterfilePatches(parsed.masterfile);
-    return parsed;
-  } catch {
-    return null;
-  }
-}
-
-function writeCachedMasterfile(masterfile: Masterfile): void {
-  try {
-    const payload: CachedMasterfile = {
-      fetchedAt: Date.now(),
-      masterfile
-    };
-    localStorage.setItem(CACHE_KEY, JSON.stringify(payload));
-  } catch {
-    // Ignore cache write failures.
-  }
-}
-
 async function fetchMasterfile(): Promise<Masterfile> {
   if (pendingFetch) {
     return pendingFetch;
   }
   pendingFetch = fetch(MASTERFILE_URL, {
-    cache: "no-store"
+    cache: "no-cache"
   })
     .then(async (response) => {
       if (!response.ok) {
         throw new Error(`Failed to fetch masterfile: ${response.status}`);
       }
       const masterfile = applyMasterfilePatches((await response.json()) as Masterfile);
-      writeCachedMasterfile(masterfile);
       return masterfile;
     })
     .finally(() => {
@@ -199,28 +180,6 @@ async function fetchMasterfile(): Promise<Masterfile> {
   return pendingFetch;
 }
 
-export async function loadMasterfile(
-  onRefresh?: (masterfile: Masterfile) => void
-): Promise<{ masterfile: Masterfile; source: "cache" | "network" }> {
-  const cached = readCachedMasterfile();
-  if (cached) {
-    if (Date.now() - cached.fetchedAt > CACHE_TTL_MS) {
-      void fetchMasterfile()
-        .then((masterfile) => {
-          onRefresh?.(masterfile);
-        })
-        .catch(() => {
-          // Keep using cached data silently if the refresh fails.
-        });
-    }
-    return {
-      masterfile: cached.masterfile,
-      source: "cache"
-    };
-  }
-  const masterfile = await fetchMasterfile();
-  return {
-    masterfile,
-    source: "network"
-  };
+export async function loadMasterfile(): Promise<Masterfile> {
+  return fetchMasterfile();
 }

@@ -1027,6 +1027,65 @@ describe("CodePen parity helpers", () => {
     expect(catalog.judgeEntries[3].familyStats).toEqual(["116/93/118"]);
   });
 
+  it("includes form changes when expanding judge families", () => {
+    const catalog = buildPokemonCatalog({
+      pokemon: {
+        "889": {
+          name: "Zamazenta",
+          pokedexId: 889,
+          defaultFormId: 2579,
+          stats: {
+            attack: 254,
+            defense: 236,
+            stamina: 192
+          },
+          formChanges: [
+            {
+              availableForms: [2578],
+              formChangeBonusAttributes: [{ targetForm: 2578 }]
+            }
+          ],
+          forms: {
+            "2578": {
+              name: "Crowned Shield",
+              form: 2578,
+              stats: {
+                attack: 250,
+                defense: 292,
+                stamina: 192
+              },
+              formChanges: [
+                {
+                  availableForms: [2579],
+                  formChangeBonusAttributes: [{ targetForm: 2579 }]
+                }
+              ]
+            },
+            "2579": {
+              name: "Hero",
+              form: 2579
+            }
+          }
+        }
+      },
+      types: {},
+      moves: {}
+    });
+
+    expect(catalog.judgeEntries.map((entry) => entry.value)).toEqual([
+      "#889: Zamazenta (Crowned Shield)",
+      "#889: Zamazenta"
+    ]);
+    expect(catalog.judgeEntries[0].familyStats).toEqual([
+      "250/292/192",
+      "254/236/192"
+    ]);
+    expect(catalog.judgeEntries[1].familyStats).toEqual([
+      "254/236/192",
+      "250/292/192"
+    ]);
+  });
+
   it("matches the original raid berry recommendation logic for representative inputs", () => {
     const input = {
       balls: 24,

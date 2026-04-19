@@ -30,17 +30,10 @@ function render(entries: HardRaidEntry[]): void {
 export function initHardRaidPage(): void {
   const run = (): void => {
     setStatus("Loading Pokemon data for the table…");
-    void loadHardRaidEntries((entries) => {
-      render(entries);
-      setStatus("Pokemon data refreshed from upstream.");
-    })
-      .then((loaded) => {
-        render(loaded.entries);
-        setStatus(
-          loaded.source === "cache"
-            ? "Using cached Pokemon data. A background refresh will run when needed."
-            : "Pokemon data loaded from upstream."
-        );
+    void loadHardRaidEntries()
+      .then((entries) => {
+        render(entries);
+        setStatus("Pokemon data loaded.");
       })
       .catch(() => {
         setStatus("Pokemon data unavailable.", true);
