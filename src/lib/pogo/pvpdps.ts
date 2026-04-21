@@ -119,6 +119,13 @@ const NO_PRESET_DEFENDER_TYPE = "None";
 const GHOST_TYPE_ID = 8;
 const DARK_TYPE_ID = 17;
 
+function resolveMoveTypeId(move: MasterfileMove | undefined): number {
+  if (typeof move?.type === "number") {
+    return move.type;
+  }
+  return move?.type?.typeId ?? 0;
+}
+
 function calculatePvpdpsCpMultiplier(level: number): number {
   if (level < 40) {
     return calculateCpMultiplier(level);
@@ -399,8 +406,8 @@ function pushRowsForCarrier(
         let chargedDamage =
           0.64 *
           (chargedMove.pvpPower ?? 0) *
-          moveDamageMultiplier(chargedMove.type ?? 0, resistanceMap1, resistanceMap2);
-        if (stabTypes.has(chargedMove.type ?? 0)) {
+          moveDamageMultiplier(resolveMoveTypeId(chargedMove), resistanceMap1, resistanceMap2);
+        if (stabTypes.has(resolveMoveTypeId(chargedMove))) {
           chargedDamage *= 1.2;
         }
         const quickTurns = (chargedMove.pvpEnergyDelta ?? 0) / quickEpt;
@@ -419,7 +426,7 @@ function pushRowsForCarrier(
         testQuickMove({ quick: quickMoveId, quickType }, quickType);
       }
     } else {
-      testQuickMove({ quick: quickMoveId }, quickMove.type ?? 0);
+      testQuickMove({ quick: quickMoveId }, resolveMoveTypeId(quickMove));
     }
   }
   if (!bestMoves.length) {

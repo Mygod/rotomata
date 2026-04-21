@@ -55,6 +55,7 @@ export interface MasterfileForm {
   chargedMoves?: number[];
   eliteQuickMoves?: number[];
   eliteChargedMoves?: number[];
+  gmaxMove?: number;
   formChanges?: MasterfileFormChange[];
   evolutions?: Record<string, MasterfileEvolutionRef>;
   tempEvolutions?: Record<string, MasterfileTempEvolution>;
@@ -71,6 +72,7 @@ export interface MasterfilePokemon {
   chargedMoves?: number[];
   eliteQuickMoves?: number[];
   eliteChargedMoves?: number[];
+  gmaxMove?: number;
   formChanges?: MasterfileFormChange[];
   forms?: Record<string, MasterfileForm>;
   evolutions?: Record<string, MasterfileEvolutionRef>;
@@ -92,8 +94,9 @@ export interface MasterfileMove {
   name: string;
   proto?: string;
   fast?: boolean;
-  type?: number;
+  type?: number | MasterfileTypeRef;
   power?: number;
+  durationMs?: number;
   pvpPower?: number;
   pvpDurationTurns?: number;
   pvpEnergyDelta?: number;

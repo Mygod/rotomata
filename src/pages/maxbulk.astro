@@ -1,0 +1,56 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+---
+
+<BaseLayout
+  title="Max Battle Bulk"
+  description="Rank Max Battle defenders by the original maxbulk script logic, including shield assumptions, Behemoth Bash variants, and optional incoming-type context."
+>
+  <section class="tool-page">
+    <div class="tool-page-header">
+      <h1>Max Battle Bulk</h1>
+    </div>
+
+    <div class="tool-panel">
+      <form class="tool-form">
+        <div>
+          <label for="type">Incoming attack type:</label>
+          <select id="type">
+            <option value="">None</option>
+          </select>
+        </div>
+      </form>
+    </div>
+
+    <section class="result-panel">
+      <div class="tool-table-scroll">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <td>Pokemon</td>
+              <td>Form</td>
+              <td>Level</td>
+              <td>CP</td>
+              <td>Bulk</td>
+              <td>TDO</td>
+              <td>Fast</td>
+              <td>Gmax</td>
+            </tr>
+          </thead>
+          <tbody id="result"></tbody>
+        </table>
+      </div>
+      <div class="result-actions">
+        <button type="button" id="show-more" class="button-secondary" hidden>Show more</button>
+      </div>
+    </section>
+
+    <p id="maxbulk-data-status" class="data-status">Loading Pokemon data for the table…</p>
+  </section>
+
+  <script>
+    import { initMaxBulkPage } from "../scripts/maxbulk";
+
+    initMaxBulkPage();
+  </script>
+</BaseLayout>

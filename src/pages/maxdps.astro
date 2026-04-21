@@ -1,0 +1,61 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+---
+
+<BaseLayout
+  title="Max Battle DPS"
+  description="Rank Max Battle attackers by the original maxdps script logic, including Gmax moves, adventure-effect adjustments, and optional move-type filtering."
+>
+  <section class="tool-page">
+    <div class="tool-page-header">
+      <h1>Max Battle DPS</h1>
+    </div>
+
+    <div class="tool-panel">
+      <form class="tool-form">
+        <div>
+          <label for="type">Move type:</label>
+          <select id="type">
+            <option value="">None</option>
+          </select>
+        </div>
+
+        <label class="checkbox-row" for="adventureeffects">
+          <input type="checkbox" id="adventureeffects" checked />
+          <span>Use adventure effects (Dynamax Cannon +100 power and Behemoth Blade dog variants)</span>
+        </label>
+      </form>
+    </div>
+
+    <section class="result-panel">
+      <div class="tool-table-scroll">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <td>#</td>
+              <td>Pokemon</td>
+              <td>Form</td>
+              <td>Level</td>
+              <td>CP</td>
+              <td>Move</td>
+              <td>DPS</td>
+              <td>TDO</td>
+            </tr>
+          </thead>
+          <tbody id="result"></tbody>
+        </table>
+      </div>
+      <div class="result-actions">
+        <button type="button" id="show-more" class="button-secondary" hidden>Show more</button>
+      </div>
+    </section>
+
+    <p id="maxdps-data-status" class="data-status">Loading Pokemon data for the table…</p>
+  </section>
+
+  <script>
+    import { initMaxDpsPage } from "../scripts/maxdps";
+
+    initMaxDpsPage();
+  </script>
+</BaseLayout>
