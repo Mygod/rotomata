@@ -83,6 +83,7 @@ export interface MaxDpsDisplayRow {
 
 export interface MaxBulkInput {
   type?: string;
+  adventureEffects?: boolean;
 }
 
 export interface MaxBulkRow {
@@ -340,6 +341,7 @@ function pushMaxBulkRow(
   rows: MaxBulkRow[],
   masterfile: Masterfile,
   resistances: Record<number, number>,
+  useAdventureEffects: boolean,
   pokemonName: string,
   formName: string,
   carrier: MasterfilePokemon | MasterfileForm,
@@ -363,7 +365,7 @@ function pushMaxBulkRow(
   if (adventureEffect?.defense) {
     defense *= adventureEffect.defense;
   }
-  if (!formName.startsWith("Crowned")) {
+  if (useAdventureEffects && !formName.startsWith("Crowned")) {
     hpShield += ADVENTURE_EFFECT_HP_SHIELD_BONUS;
   }
   let bulk = defense * (entry.hp + hpShield) * 0.001;
@@ -442,29 +444,31 @@ export function buildMaxDpsRows(masterfile: Masterfile, input: MaxDpsInput = {})
 export function buildMaxBulkRows(masterfile: Masterfile, input: MaxBulkInput = {}): MaxBulkRow[] {
   const rows: MaxBulkRow[] = [];
   const resistances = buildBulkResistanceMap(masterfile, input.type);
+  const useAdventureEffects = input.adventureEffects !== false;
   for (const pokemon of Object.values(masterfile.pokemon)) {
     if (
       pokemon.name !== "Zacian" &&
       pokemon.name !== "Zamazenta" &&
       pokemon.name !== "Urshifu"
     ) {
-      pushMaxBulkRow(rows, masterfile, resistances, pokemon.name, "", pokemon);
+      pushMaxBulkRow(rows, masterfile, resistances, useAdventureEffects, pokemon.name, "", pokemon);
     }
     for (const form of Object.values(pokemon.forms ?? {})) {
       if (form.name === "Complete Ten Percent") {
         continue;
       }
-      pushMaxBulkRow(rows, masterfile, resistances, pokemon.name, form.name ?? "", form, pokemon);
+      pushMaxBulkRow(rows, masterfile, resistances, useAdventureEffects, pokemon.name, form.name ?? "", form, pokemon);
       if (form.name === "Crowned Shield") {
-        pushMaxBulkRow(rows, masterfile, resistances, pokemon.name, "Crowned 4x", form, pokemon, 240);
+        pushMaxBulkRow(rows, masterfile, resistances, useAdventureEffects, pokemon.name, "Crowned 4x", form, pokemon, 240);
       }
-      if (form.name === "Crowned Sword" || form.name === "Crowned Shield") {
+      if (useAdventureEffects && (form.name === "Crowned Sword" || form.name === "Crowned Shield")) {
         const adventureEffect = BEHEMOTH_BASH_ADVENTURE_EFFECTS[form.name];
         if (adventureEffect) {
           pushMaxBulkRow(
             rows,
             masterfile,
             resistances,
+            useAdventureEffects,
             pokemon.name,
             adventureEffect.form,
             form,
@@ -479,6 +483,7 @@ export function buildMaxBulkRows(masterfile: Masterfile, input: MaxBulkInput = {
             rows,
             masterfile,
             resistances,
+            useAdventureEffects,
             pokemon.name,
             crowned4xEffect.form,
             form,

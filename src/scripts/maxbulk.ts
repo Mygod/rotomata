@@ -8,6 +8,11 @@ import {
 
 const PAGE_SIZE = 50;
 const NO_TYPE_VALUE = "";
+const ADVENTURE_EFFECTS_PARAM = "adventureeffects";
+
+function isTruthyParam(value: string | null): boolean {
+  return value !== "0" && value !== "false";
+}
 
 function setStatus(message: string, isError = false): void {
   const status = document.getElementById("maxbulk-data-status");
@@ -50,6 +55,11 @@ function updateUrl(): void {
   if (value.trim()) {
     params.set("type", value);
   }
+  const adventureEffectsEnabled =
+    (document.getElementById("adventureeffects") as HTMLInputElement | null)?.checked ?? true;
+  if (!adventureEffectsEnabled) {
+    params.set(ADVENTURE_EFFECTS_PARAM, "0");
+  }
   url.search = params.toString();
   history.replaceState(null, "", url);
 }
@@ -88,7 +98,9 @@ export function initMaxBulkPage(): void {
       updateUrl();
       visibleCount = PAGE_SIZE;
       rows = buildMaxBulkRows(masterfile, {
-        type: (document.getElementById("type") as HTMLSelectElement | null)?.value ?? NO_TYPE_VALUE
+        type: (document.getElementById("type") as HTMLSelectElement | null)?.value ?? NO_TYPE_VALUE,
+        adventureEffects:
+          (document.getElementById("adventureeffects") as HTMLInputElement | null)?.checked ?? true
       });
       renderRows(rows, visibleCount);
     };
@@ -102,6 +114,14 @@ export function initMaxBulkPage(): void {
     if (typeSelect) {
       typeSelect.dataset.initialValue = params.get("type") ?? NO_TYPE_VALUE;
       typeSelect.addEventListener("change", () => {
+        sync();
+      });
+    }
+    const adventureEffectsCheckbox = document.getElementById("adventureeffects") as HTMLInputElement | null;
+    if (adventureEffectsCheckbox) {
+      const value = params.get(ADVENTURE_EFFECTS_PARAM);
+      adventureEffectsCheckbox.checked = value === null ? true : isTruthyParam(value);
+      adventureEffectsCheckbox.addEventListener("change", () => {
         sync();
       });
     }

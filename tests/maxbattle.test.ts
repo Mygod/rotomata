@@ -287,7 +287,7 @@ describe("maxbattle", () => {
     expect(watermon!.fast).toBe(1000);
   });
 
-  it("adds Crowned synthetic rows and preserves raw gmax ids in maxbulk", () => {
+  it("adds Crowned synthetic rows and Behemoth Bash variants in maxbulk", () => {
     const masterfile = createMasterfile({
       "889": createPokemon("Zamazenta", 889, [9], { attack: 250, defense: 200, stamina: 180 }, {
         forms: {
@@ -313,7 +313,43 @@ describe("maxbattle", () => {
     expect(formatMaxBulkRow(crowned4xAdventure!).gmax).toBe("✓");
   });
 
-  it("gives non-Crowned rows the extra shield bonus and breaks maxbulk ties by value", () => {
+  it("can disable maxbulk adventure effects for both the shield bonus and dog variants", () => {
+    const masterfile = createMasterfile({
+      "889": createPokemon("Zamazenta", 889, [9], { attack: 250, defense: 200, stamina: 180 }, {
+        forms: {
+          "2578": createForm("Crowned Shield", {
+            stats: { attack: 250, defense: 300, stamina: 192 },
+            quickMoves: [401],
+            gmaxMove: 480
+          })
+        }
+      }),
+      "1": createPokemon("BaseMon", 1, [1], { attack: 200, defense: 220, stamina: 220 }, {
+        quickMoves: [404]
+      })
+    });
+
+    const withEffect = buildMaxBulkRows(masterfile, { adventureEffects: true });
+    const withoutEffect = buildMaxBulkRows(masterfile, { adventureEffects: false });
+    const baseMonWithEffect = withEffect.find((row) => row.pokemon === "BaseMon" && row.form === "");
+    const baseMonWithoutEffect = withoutEffect.find((row) => row.pokemon === "BaseMon" && row.form === "");
+    const crownedAdventure = withEffect.find(
+      (row) => row.pokemon === "Zamazenta" && row.form === "Crowned Shield (Behemoth Bash)"
+    );
+    const crownedAdventureWithoutEffect = withoutEffect.find(
+      (row) => row.pokemon === "Zamazenta" && row.form === "Crowned Shield (Behemoth Bash)"
+    );
+    const crowned4xAdventureWithoutEffect = withoutEffect.find(
+      (row) => row.pokemon === "Zamazenta" && row.form === "Crowned 4x (Behemoth Bash)"
+    );
+
+    expect(baseMonWithEffect!.bulk).toBeGreaterThan(baseMonWithoutEffect!.bulk);
+    expect(crownedAdventure).toBeDefined();
+    expect(crownedAdventureWithoutEffect).toBeUndefined();
+    expect(crowned4xAdventureWithoutEffect).toBeUndefined();
+  });
+
+  it("breaks maxbulk ties by value", () => {
     const masterfile = createMasterfile({
       "1": createPokemon("BaseMon", 1, [1], { attack: 200, defense: 220, stamina: 220 }, {
         quickMoves: [404],
