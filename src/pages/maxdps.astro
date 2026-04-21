@@ -4,7 +4,7 @@ import BaseLayout from "../layouts/BaseLayout.astro";
 
 <BaseLayout
   title="Max Battle DPS"
-  description="Rank Max Battle attackers by the original maxdps script logic, including Gmax moves, adventure-effect adjustments, and optional move-type filtering."
+  description="Rank Max Battle attackers by the original maxdps script logic, including Gmax moves, adventure-effect adjustments, and optional defender-type presets."
 >
   <section class="tool-page">
     <div class="tool-page-header">
@@ -13,10 +13,25 @@ import BaseLayout from "../layouts/BaseLayout.astro";
 
     <div class="tool-panel">
       <form class="tool-form">
+        <div class="settings-row settings-row-two">
+          <div>
+            <label for="type1">Defender type 1:</label>
+            <select id="type1">
+              <option value="None">None</option>
+            </select>
+          </div>
+          <div>
+            <label for="type2">Defender type 2:</label>
+            <select id="type2">
+              <option value="None">None</option>
+            </select>
+          </div>
+        </div>
+
         <div>
-          <label for="type">Move type:</label>
-          <select id="type">
-            <option value="">None</option>
+          <label for="doubleweakness">Set weakness preset:</label>
+          <select id="doubleweakness">
+            <option value="None">None</option>
           </select>
         </div>
 

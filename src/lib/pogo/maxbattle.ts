@@ -5,7 +5,6 @@ import type {
   MasterfileMove,
   MasterfilePokemon,
   MasterfileStats,
-  MasterfileTypeEntry,
   MasterfileTypeRef
 } from "./masterfile";
 
@@ -57,7 +56,8 @@ interface MaxBattleCarrier {
 }
 
 export interface MaxDpsInput {
-  type?: string;
+  type1?: string;
+  type2?: string;
   adventureEffects?: boolean;
 }
 
@@ -106,6 +106,10 @@ export interface MaxBulkDisplayRow {
   tdo: string;
   fast: string;
   gmax: string;
+}
+
+interface ResistanceMap {
+  [typeId: number]: number;
 }
 
 function resolveMoveTypeId(move: MasterfileMove | undefined): number | null {
@@ -170,17 +174,33 @@ function applyAdventureEffect(entry: Level50StatLine, adventureEffect?: Adventur
   return result;
 }
 
-function parseTypeFilterId(masterfile: Masterfile, typeName: string | undefined): number | null {
+function resolveTypeMultipliers(
+  types: Masterfile["types"],
+  typeName: string | undefined
+): ResistanceMap {
   const lookup = typeName?.trim();
+  const result: ResistanceMap = {};
   if (!lookup) {
-    return null;
+    return result;
   }
-  for (const type of Object.values(masterfile.types)) {
+  for (const type of Object.values(types)) {
     if (type.typeName.localeCompare(lookup, undefined, { sensitivity: "accent" }) === 0) {
-      return type.typeId > 0 ? type.typeId : null;
+      if (type.typeId <= 0) {
+        return result;
+      }
+      for (const entry of type.weaknesses ?? []) {
+        result[entry.typeId] = 1.6;
+      }
+      for (const entry of type.resistances ?? []) {
+        result[entry.typeId] = 0.625;
+      }
+      for (const entry of type.immunes ?? []) {
+        result[entry.typeId] = 0.390625;
+      }
+      return result;
     }
   }
-  return null;
+  return result;
 }
 
 function buildBulkResistanceMap(
@@ -213,6 +233,10 @@ function buildBulkResistanceMap(
   return {};
 }
 
+function moveDamageMultiplier(typeId: number, first: ResistanceMap, second: ResistanceMap): number {
+  return (first[typeId] ?? 1) * (second[typeId] ?? 1);
+}
+
 function shouldCheckMaxDpsCarrier(carrier: MasterfileForm): boolean {
   return (
     carrier.stats !== undefined ||
@@ -237,7 +261,8 @@ function shouldCheckMaxBulkCarrier(carrier: MasterfileForm): boolean {
 function pushMaxDpsRows(
   rows: MaxDpsRow[],
   masterfile: Masterfile,
-  typeFilterId: number | null,
+  resistanceMap1: ResistanceMap,
+  resistanceMap2: ResistanceMap,
   useAdventureEffects: boolean,
   adventureEffectPowerBonus: number,
   pokemonName: string,
@@ -264,7 +289,7 @@ function pushMaxDpsRows(
       return;
     }
     const entry = applyAdventureEffect(buildLevel50StatLine(statsCarrier.stats as MasterfileStats), adventureEffect);
-    let dps = baseDps;
+    let dps = baseDps * moveDamageMultiplier(moveTypeId, resistanceMap1, resistanceMap2);
     let value = entry.value;
     if (stabTypes.has(moveTypeId)) {
       dps *= STAB_MULTIPLIER;
@@ -287,35 +312,26 @@ function pushMaxDpsRows(
     const gmaxMove = masterfile.moves[String(gmaxMoveId)];
     const gmaxMoveTypeId = resolveMoveTypeId(gmaxMove);
     if ((pokemonName === "Zacian" || pokemonName === "Zamazenta") && formName.startsWith("Crowned")) {
-      if (typeFilterId === null || gmaxMoveTypeId === typeFilterId) {
-        addMove(gmaxMoveId, gmaxMove?.power ?? 0, gmaxMoveTypeId);
-        const adventureEffect = useAdventureEffects ? BEHEMOTH_BLADE_ADVENTURE_EFFECTS[formName] : undefined;
-        if (adventureEffect !== undefined) {
-          addMove(gmaxMoveId, gmaxMove?.power ?? 0, gmaxMoveTypeId, adventureEffect, adventureEffect.form);
-        }
+      addMove(gmaxMoveId, gmaxMove?.power ?? 0, gmaxMoveTypeId);
+      const adventureEffect = useAdventureEffects ? BEHEMOTH_BLADE_ADVENTURE_EFFECTS[formName] : undefined;
+      if (adventureEffect !== undefined) {
+        addMove(gmaxMoveId, gmaxMove?.power ?? 0, gmaxMoveTypeId, adventureEffect, adventureEffect.form);
       }
       return;
     }
     if (pokemonName === "Eternatus" && formName !== "Eternamax") {
-      if (typeFilterId === null || gmaxMoveTypeId === typeFilterId) {
-        addMove(
-          gmaxMoveId,
-          (gmaxMove?.power ?? 0) + adventureEffectPowerBonus,
-          gmaxMoveTypeId
-        );
-      }
-      return;
-    }
-    if (typeFilterId === null || gmaxMoveTypeId === typeFilterId) {
       addMove(
         gmaxMoveId,
         (gmaxMove?.power ?? 0) + adventureEffectPowerBonus,
         gmaxMoveTypeId
       );
-      if (typeFilterId !== null) {
-        return;
-      }
+      return;
     }
+    addMove(
+      gmaxMoveId,
+      (gmaxMove?.power ?? 0) + adventureEffectPowerBonus,
+      gmaxMoveTypeId
+    );
   }
 
   for (const quickMoveId of resolveCarrierMoveIds(carrier, pokemonData, "quickMoves", "eliteQuickMoves")) {
@@ -324,16 +340,11 @@ function pushMaxDpsRows(
     }
     const quickMove = masterfile.moves[String(quickMoveId)];
     const quickMoveTypeId = resolveMoveTypeId(quickMove);
-    if (typeFilterId === null || quickMoveTypeId === typeFilterId) {
-      addMove(
-        quickMoveId,
-        MAX_MOVE_DPS + adventureEffectPowerBonus,
-        quickMoveTypeId
-      );
-      if (typeFilterId !== null) {
-        return;
-      }
-    }
+    addMove(
+      quickMoveId,
+      MAX_MOVE_DPS + adventureEffectPowerBonus,
+      quickMoveTypeId
+    );
   }
 }
 
@@ -409,14 +420,16 @@ export function listMaxBattleTypeNames(masterfile: Masterfile): string[] {
 
 export function buildMaxDpsRows(masterfile: Masterfile, input: MaxDpsInput = {}): MaxDpsRow[] {
   const rows: MaxDpsRow[] = [];
-  const typeFilterId = parseTypeFilterId(masterfile, input.type);
+  const resistanceMap1 = resolveTypeMultipliers(masterfile.types, input.type1);
+  const resistanceMap2 = resolveTypeMultipliers(masterfile.types, input.type2);
   const useAdventureEffects = input.adventureEffects !== false;
   const adventureEffectPowerBonus = useAdventureEffects ? ADVENTURE_EFFECT_POWER_BONUS : 0;
   for (const pokemon of Object.values(masterfile.pokemon)) {
     pushMaxDpsRows(
       rows,
       masterfile,
-      typeFilterId,
+      resistanceMap1,
+      resistanceMap2,
       useAdventureEffects,
       adventureEffectPowerBonus,
       pokemon.name,
@@ -427,7 +440,8 @@ export function buildMaxDpsRows(masterfile: Masterfile, input: MaxDpsInput = {})
       pushMaxDpsRows(
         rows,
         masterfile,
-        typeFilterId,
+        resistanceMap1,
+        resistanceMap2,
         useAdventureEffects,
         adventureEffectPowerBonus,
         pokemon.name,

@@ -96,14 +96,23 @@ function createMasterfile(pokemon: Record<string, MasterfilePokemon>): Masterfil
     pokemon,
     types: {
       "1": createType(1, "Normal"),
-      "3": createType(3, "Flying"),
+      "3": createType(3, "Flying", {
+        weaknesses: [{ typeId: 13, typeName: "Electric" }]
+      }),
       "9": createType(9, "Steel"),
-      "10": createType(10, "Fire"),
-      "11": createType(11, "Water"),
+      "10": createType(10, "Fire", {
+        weaknesses: [{ typeId: 11, typeName: "Water" }],
+        resistances: [{ typeId: 10, typeName: "Fire" }]
+      }),
+      "11": createType(11, "Water", {
+        weaknesses: [{ typeId: 13, typeName: "Electric" }],
+        resistances: [{ typeId: 10, typeName: "Fire" }]
+      }),
       "13": createType(13, "Electric", {
         weakAgainst: [{ typeId: 11, typeName: "Water" }],
         veryWeakAgainst: [{ typeId: 3, typeName: "Flying" }],
-        strengths: [{ typeId: 13, typeName: "Electric" }]
+        strengths: [{ typeId: 13, typeName: "Electric" }],
+        resistances: [{ typeId: 13, typeName: "Electric" }]
       }),
       "16": createType(16, "Dragon")
     },
@@ -113,6 +122,7 @@ function createMasterfile(pokemon: Record<string, MasterfilePokemon>): Masterfil
       "403": createMove(403, "Quick Water", 11, { durationMs: 1000 }),
       "404": createMove(404, "Quick Normal", 1, { durationMs: 1000 }),
       "427": createMove(427, "Gmax Wildfire", 10, { power: 450, durationMs: 2500 }),
+      "428": createMove(428, "Max Geyser", 11, { power: 450, durationMs: 2500 }),
       "479": createMove(479, "Max Behemoth Blade", 9, { power: 350, durationMs: 2500 }),
       "480": createMove(480, "Max Behemoth Bash", 9, { power: 350, durationMs: 2500 }),
       "483": createMove(483, "Max Dynamax Cannon", 16, { power: 450, durationMs: 2500 })
@@ -144,7 +154,7 @@ describe("maxbattle", () => {
     });
 
     expect(listMaxBattleTypeNames(masterfile)).not.toContain("None");
-    expect(buildMaxDpsRows(masterfile, { type: "None" })).toEqual(buildMaxDpsRows(masterfile, {}));
+    expect(buildMaxDpsRows(masterfile, { type1: "None", type2: "None" })).toEqual(buildMaxDpsRows(masterfile, {}));
     expect(buildMaxBulkRows(masterfile, { type: "None" })).toEqual(buildMaxBulkRows(masterfile, {}));
   });
 
@@ -158,7 +168,7 @@ describe("maxbattle", () => {
       })
     });
 
-    const rows = buildMaxDpsRows(masterfile, { type: "Fire" });
+    const rows = buildMaxDpsRows(masterfile);
 
     expect(rows).toHaveLength(2);
     expect(rows.map((row) => row.form)).toEqual(["", "Normal"]);
@@ -248,6 +258,22 @@ describe("maxbattle", () => {
     expect(firemonWithEffect!.dps).toBeGreaterThan(firemonWithoutEffect!.dps);
   });
 
+  it("applies defender-type multipliers in maxdps", () => {
+    const masterfile = createMasterfile({
+      "1": createPokemon("Firemon", 1, [10], { attack: 200, defense: 160, stamina: 160 }, {
+        gmaxMove: 427
+      }),
+      "2": createPokemon("Watermon", 2, [11], { attack: 200, defense: 160, stamina: 160 }, {
+        gmaxMove: 428
+      })
+    });
+
+    const rows = buildMaxDpsRows(masterfile, { type1: "Fire", type2: "Flying" });
+
+    expect(rows.slice(0, 2).map((row) => row.pokemon)).toEqual(["Watermon", "Firemon"]);
+    expect(rows[0].dps).toBeGreaterThan(rows[1].dps);
+  });
+
   it("sorts maxdps rows by dps and then by value", () => {
     const masterfile = createMasterfile({
       "1": createPokemon("Bulkier", 1, [10], { attack: 210, defense: 220, stamina: 220 }, {
@@ -258,7 +284,7 @@ describe("maxbattle", () => {
       })
     });
 
-    const rows = buildMaxDpsRows(masterfile, { type: "Fire" });
+    const rows = buildMaxDpsRows(masterfile);
 
     expect(rows.slice(0, 2).map((row) => row.pokemon)).toEqual(["Bulkier", "Frailer"]);
     expect(rows[0].dps).toBeCloseTo(rows[1].dps, 10);

@@ -5,9 +5,14 @@ import {
   listMaxBattleTypeNames,
   type MaxDpsRow
 } from "../lib/pogo/maxbattle";
+import {
+  listDoubleWeaknessPresets,
+  type DoubleWeaknessPreset
+} from "../lib/pogo/pvpdps";
 
 const PAGE_SIZE = 50;
-const NO_TYPE_VALUE = "";
+const NO_TYPE_VALUE = "None";
+const NO_PRESET_VALUE = "None";
 const ADVENTURE_EFFECTS_PARAM = "adventureeffects";
 
 function isTruthyParam(value: string | null): boolean {
@@ -23,12 +28,12 @@ function setStatus(message: string, isError = false): void {
   status.classList.toggle("bad", isError);
 }
 
-function populateTypeSelect(masterfile: Masterfile): void {
-  const select = document.getElementById("type") as HTMLSelectElement | null;
+function populateTypeSelect(masterfile: Masterfile, id: string): void {
+  const select = document.getElementById(id) as HTMLSelectElement | null;
   if (!select) {
     return;
   }
-  const currentValue = select.dataset.initialValue ?? select.value ?? NO_TYPE_VALUE;
+  const currentValue = (select.dataset.initialValue ?? select.value) || NO_TYPE_VALUE;
   select.replaceChildren();
   const noneOption = document.createElement("option");
   noneOption.value = NO_TYPE_VALUE;
@@ -48,13 +53,44 @@ function populateTypeSelect(masterfile: Masterfile): void {
   delete select.dataset.initialValue;
 }
 
+function populateDoubleWeaknessSelect(presets: DoubleWeaknessPreset[]): void {
+  const select = document.getElementById("doubleweakness") as HTMLSelectElement | null;
+  if (!select) {
+    return;
+  }
+  const currentValue = (select.dataset.initialValue ?? select.value) || NO_PRESET_VALUE;
+  select.replaceChildren();
+  const noneOption = document.createElement("option");
+  noneOption.value = NO_PRESET_VALUE;
+  noneOption.textContent = NO_PRESET_VALUE;
+  select.append(noneOption);
+  for (const preset of presets) {
+    const option = document.createElement("option");
+    option.value = preset.value;
+    option.textContent = preset.label;
+    select.append(option);
+  }
+  if (Array.from(select.options).some((option) => option.value === currentValue)) {
+    select.value = currentValue;
+  } else {
+    select.value = NO_PRESET_VALUE;
+  }
+  delete select.dataset.initialValue;
+}
+
+function updateQueryParam(params: URLSearchParams, key: string, value: string): void {
+  if (value.trim() && value !== NO_TYPE_VALUE) {
+    params.set(key, value);
+  } else {
+    params.delete(key);
+  }
+}
+
 function updateUrl(): void {
   const url = new URL(window.location.href);
   const params = new URLSearchParams();
-  const value = (document.getElementById("type") as HTMLSelectElement | null)?.value ?? NO_TYPE_VALUE;
-  if (value.trim()) {
-    params.set("type", value);
-  }
+  updateQueryParam(params, "type1", (document.getElementById("type1") as HTMLSelectElement).value);
+  updateQueryParam(params, "type2", (document.getElementById("type2") as HTMLSelectElement).value);
   const adventureEffectsEnabled =
     (document.getElementById("adventureeffects") as HTMLInputElement | null)?.checked ?? true;
   if (!adventureEffectsEnabled) {
@@ -88,8 +124,28 @@ export function initMaxDpsPage(): void {
     const form = document.getElementsByTagName("form")[0];
     const params = new URLSearchParams(window.location.search);
     let masterfile: Masterfile | null = null;
+    let presets: DoubleWeaknessPreset[] = [];
     let rows: MaxDpsRow[] = [];
     let visibleCount = PAGE_SIZE;
+
+    const getTypeSelect = (id: string): HTMLSelectElement =>
+      document.getElementById(id) as HTMLSelectElement;
+
+    const syncDoubleWeaknessSelect = (): void => {
+      const presetSelect = document.getElementById("doubleweakness") as HTMLSelectElement | null;
+      if (!presetSelect) {
+        return;
+      }
+      const type1 = getTypeSelect("type1").value;
+      const type2 = getTypeSelect("type2").value;
+      const matches = presets.filter(
+        (preset) => preset.defenderType1 === type1 && preset.defenderType2 === type2
+      );
+      if (matches.some((preset) => preset.value === presetSelect.value)) {
+        return;
+      }
+      presetSelect.value = matches.length === 1 ? matches[0].value : NO_PRESET_VALUE;
+    };
 
     const sync = (): void => {
       if (!masterfile) {
@@ -98,7 +154,8 @@ export function initMaxDpsPage(): void {
       updateUrl();
       visibleCount = PAGE_SIZE;
       rows = buildMaxDpsRows(masterfile, {
-        type: (document.getElementById("type") as HTMLSelectElement | null)?.value ?? NO_TYPE_VALUE,
+        type1: (document.getElementById("type1") as HTMLSelectElement | null)?.value ?? NO_TYPE_VALUE,
+        type2: (document.getElementById("type2") as HTMLSelectElement | null)?.value ?? NO_TYPE_VALUE,
         adventureEffects:
           (document.getElementById("adventureeffects") as HTMLInputElement | null)?.checked ?? true
       });
@@ -110,10 +167,31 @@ export function initMaxDpsPage(): void {
       sync();
     });
 
-    const typeSelect = document.getElementById("type") as HTMLSelectElement | null;
-    if (typeSelect) {
-      typeSelect.dataset.initialValue = params.get("type") ?? NO_TYPE_VALUE;
+    for (const id of ["type1", "type2"]) {
+      const typeSelect = document.getElementById(id) as HTMLSelectElement | null;
+      if (!typeSelect) {
+        continue;
+      }
+      typeSelect.dataset.initialValue = params.get(id) ?? NO_TYPE_VALUE;
       typeSelect.addEventListener("change", () => {
+        syncDoubleWeaknessSelect();
+        sync();
+      });
+    }
+    const presetSelect = document.getElementById("doubleweakness") as HTMLSelectElement | null;
+    if (presetSelect) {
+      presetSelect.dataset.initialValue = NO_PRESET_VALUE;
+      presetSelect.addEventListener("change", () => {
+        const preset = presets.find((item) => item.value === presetSelect.value);
+        const type1Select = getTypeSelect("type1");
+        const type2Select = getTypeSelect("type2");
+        if (!preset) {
+          type1Select.value = NO_TYPE_VALUE;
+          type2Select.value = NO_TYPE_VALUE;
+        } else {
+          type1Select.value = preset.defenderType1;
+          type2Select.value = preset.defenderType2;
+        }
         sync();
       });
     }
@@ -139,7 +217,11 @@ export function initMaxDpsPage(): void {
     void loadMasterfile()
       .then((loadedMasterfile) => {
         masterfile = loadedMasterfile;
-        populateTypeSelect(loadedMasterfile);
+        presets = listDoubleWeaknessPresets(loadedMasterfile);
+        populateTypeSelect(loadedMasterfile, "type1");
+        populateTypeSelect(loadedMasterfile, "type2");
+        populateDoubleWeaknessSelect(presets);
+        syncDoubleWeaknessSelect();
         sync();
         setStatus("Pokemon data loaded.");
       })
