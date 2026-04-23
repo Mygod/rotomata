@@ -1,0 +1,30 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+---
+
+<BaseLayout
+  title="Functionally Perfect List"
+  description="Browse Pokemon GO Pokemon whose 15/15/14 HP matches 15/15/15 at key level caps."
+>
+  <section class="tool-page">
+    <div class="tool-page-header">
+      <h1>Functionally Perfect List</h1>
+      <p>
+        Pokemon and forms where a 15/15/14 reaches the same HP as a 15/15/15 at
+        selected level caps. Names link to Judge for follow-up checks.
+      </p>
+    </div>
+
+    <section class="result-panel">
+      <div id="fp-sections" class="fp-sections" aria-live="polite"></div>
+    </section>
+
+    <p id="fp-data-status" class="data-status">Loading Pokemon data for the list…</p>
+  </section>
+
+  <script>
+    import { initFunctionallyPerfectPage } from "../scripts/fp";
+
+    initFunctionallyPerfectPage();
+  </script>
+</BaseLayout>
