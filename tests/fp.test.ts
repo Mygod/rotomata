@@ -42,11 +42,28 @@ function sectionLabels(masterfileData: Masterfile, level: number): string[] {
     .entries.map((entry) => entry.label);
 }
 
+function sectionEntries(masterfileData: Masterfile, level: number) {
+  return buildFunctionallyPerfectSections(masterfileData)
+    .find((section) => section.level === level)!
+    .entries;
+}
+
 describe("Functionally Perfect List", () => {
   it("builds fixed Judge links for listed entries", () => {
     expect(buildFunctionallyPerfectJudgeHref("100/100/15")).toBe(
       "/judge?stats=100%2F100%2F15&atk=15&def=15&sta=14&cpcap=50000&lvcap=50%2C51%2C52%2C53%2C55"
     );
+  });
+
+  it("renders Lv40 last", () => {
+    expect(buildFunctionallyPerfectSections(masterfile({})).map((section) => section.level)).toEqual([
+      50,
+      51,
+      52,
+      53,
+      55,
+      40
+    ]);
   });
 
   it("includes base and form entries at regular levels", () => {
@@ -77,6 +94,43 @@ describe("Functionally Perfect List", () => {
     expect(sectionLabels(data, 40)).toEqual(["BaseOnly"]);
     expect(sectionLabels(data, 50)).toEqual(["Formed (Tall)"]);
     expect(sectionLabels(data, 51)).toEqual(["Formed (Tall)"]);
+    expect(sectionEntries(data, 40)[0].highlighted).toBe(false);
+  });
+
+  it("collapses forms only when their full base stats match", () => {
+    const data = masterfile({
+      "774": pokemon("Minior", 774, 14, {
+        defaultFormId: 2707,
+        forms: {
+          "2707": {
+            name: "Meteor Blue",
+            form: 2707
+          },
+          "2708": {
+            name: "Blue",
+            form: 2708,
+            stats: stats(14, 218, 131)
+          },
+          "2709": {
+            name: "Green",
+            form: 2709,
+            stats: stats(14, 218, 131)
+          }
+        }
+      })
+    });
+
+    const entries = sectionEntries(data, 40);
+    expect(entries).toEqual([
+      expect.objectContaining({
+        label: "Minior",
+        stats: "100/100/14"
+      }),
+      expect.objectContaining({
+        label: "Minior (Blue / Green)",
+        stats: "218/131/14"
+      })
+    ]);
   });
 
   it("uses mega-eligible base entries for mega-only levels when HP is unchanged", () => {
@@ -97,6 +151,7 @@ describe("Functionally Perfect List", () => {
     });
 
     expect(sectionLabels(data, 55)).toEqual(["Charizard"]);
+    expect(sectionEntries(data, 55)[0].highlighted).toBe(true);
   });
 
   it("splits stamina-changing mega and primal entries for regular and mega-only levels", () => {
@@ -184,5 +239,45 @@ describe("Functionally Perfect List", () => {
       "EarlierDex (Higher Form) (Mega)"
     ]);
     expect(sectionLabels(data, 55)).toEqual(["LaterDex", "Alpha"]);
+  });
+
+  it("marks old bold entries as highlighted instead of plain links", () => {
+    const data = masterfile({
+      "2": pokemon("LaterDex", 2, 15, {
+        tempEvolutions: {
+          "1": {
+            tempEvoId: 1,
+            stats: stats(15, 200, 200)
+          }
+        }
+      }),
+      "6": pokemon("Charizard", 6, 15, {
+        tempEvolutions: {
+          "2": {
+            tempEvoId: 2,
+            stats: stats(15, 273, 213)
+          }
+        }
+      }),
+      "382": {
+        ...pokemon("Kyogre", 382, 201, {
+          tempEvolutions: {
+            "4": {
+              tempEvoId: 4,
+              stats: stats(19, 353, 268)
+            }
+          }
+        }),
+        legendary: true
+      }
+    });
+
+    expect(sectionEntries(data, 52)).toEqual([
+      expect.objectContaining({
+        label: "Kyogre (Primal)",
+        highlighted: true
+      })
+    ]);
+    expect(sectionEntries(data, 55).find((entry) => entry.label === "Charizard")?.highlighted).toBe(true);
   });
 });

@@ -38,6 +38,9 @@ function render(sections: FunctionallyPerfectSection[]): void {
       const item = document.createElement("li");
       const link = document.createElement("a");
       link.href = entry.href;
+      if (entry.highlighted) {
+        link.classList.add("fp-link-highlight");
+      }
       link.textContent = entry.label;
       link.title = `${entry.stats} in Judge`;
       item.append(link);

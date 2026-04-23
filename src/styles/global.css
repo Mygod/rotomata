@@ -560,6 +560,18 @@ input[type="range"] {
   background: rgba(15, 118, 110, 0.14);
 }
 
+.fp-list a.fp-link-highlight {
+  border-color: rgba(217, 119, 6, 0.3);
+  background: rgba(217, 119, 6, 0.12);
+  color: var(--signal-hot);
+}
+
+.fp-list a.fp-link-highlight:hover,
+.fp-list a.fp-link-highlight:focus {
+  border-color: rgba(217, 119, 6, 0.55);
+  background: rgba(217, 119, 6, 0.18);
+}
+
 .fp-empty {
   margin: 0;
   color: var(--muted);
