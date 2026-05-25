@@ -480,6 +480,30 @@ input[type="range"] {
   color: var(--muted);
 }
 
+.filter-block {
+  display: grid;
+  gap: 0.85rem;
+  padding-top: 0.95rem;
+  border-top: 1px solid var(--line);
+}
+
+.filter-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.8rem 1.2rem;
+  align-items: flex-end;
+}
+
+.filter-options > div {
+  display: grid;
+  gap: 0.35rem;
+  min-width: 10rem;
+}
+
+.filter-options select {
+  min-width: 10rem;
+}
+
 .tool-table-scroll {
   overflow-x: auto;
 }

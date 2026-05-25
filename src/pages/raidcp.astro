@@ -1,0 +1,129 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+---
+
+<BaseLayout
+  title="Raid CP Filter"
+  description="Filter Pokemon GO raid catch CPs by natural IV targets and stricter purification targets."
+>
+  <section class="tool-page">
+    <div class="tool-page-header">
+      <h1>Raid CP Filter</h1>
+    </div>
+
+    <div class="tool-panel">
+      <form class="tool-form">
+        <label for="stats">Pokemon/Base Stats:</label>
+        <input type="text" id="stats" list="pokelist" />
+        <datalist id="pokelist"></datalist>
+
+        <div class="inline-cluster">
+          <div>
+            <label for="ivfloor">IV Floor:</label>
+            <input type="text" id="ivfloor" list="ivlist" maxlength="2" class="iv" value="10" />
+          </div>
+        </div>
+
+        <div class="filter-block">
+          <div class="filter-heading"><em>Keep raid bosses matching</em></div>
+          <div class="filter-options">
+            <label class="checkbox-row" for="fullatk">
+              <input type="checkbox" id="fullatk" />
+              <span>15 attack</span>
+            </label>
+            <label class="checkbox-row" for="fulldef">
+              <input type="checkbox" id="fulldef" />
+              <span>15 defense</span>
+            </label>
+            <div>
+              <label for="hpmode">HP:</label>
+              <select id="hpmode">
+                <option value="full">15</option>
+                <option value="functional" title="14 HP IV when it ties 15 HP at Lv20 or Lv25">
+                  Functional 15
+                </option>
+                <option value="any" selected>Any</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="filter-block">
+          <label class="checkbox-row" for="purify">
+            <input type="checkbox" id="purify" />
+            <span>Also include shadows if purified to</span>
+          </label>
+          <div class="filter-options">
+            <label class="checkbox-row" for="purifyatk">
+              <input type="checkbox" id="purifyatk" checked />
+              <span>15 attack</span>
+            </label>
+            <label class="checkbox-row" for="purifydef">
+              <input type="checkbox" id="purifydef" checked />
+              <span>15 defense</span>
+            </label>
+            <div>
+              <label for="purifyhpmode">HP:</label>
+              <select id="purifyhpmode">
+                <option value="full" selected>15</option>
+                <option value="functional" title="14 HP IV when it ties 15 HP at Lv20 or Lv25">
+                  Functional 15
+                </option>
+                <option value="any">Any</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <datalist id="ivlist">
+          <option value="0"></option>
+          <option value="1"></option>
+          <option value="2"></option>
+          <option value="3"></option>
+          <option value="4"></option>
+          <option value="5"></option>
+          <option value="6"></option>
+          <option value="7"></option>
+          <option value="8"></option>
+          <option value="9"></option>
+          <option value="10"></option>
+          <option value="11"></option>
+          <option value="12"></option>
+          <option value="13"></option>
+          <option value="14"></option>
+          <option value="15"></option>
+        </datalist>
+      </form>
+    </div>
+
+    <section class="result-panel">
+      <div class="tool-table-scroll">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <td>IV</td>
+              <td>Level</td>
+              <td>CP</td>
+              <td>Attack</td>
+              <td>Defense</td>
+              <td>HP</td>
+              <td>Stat Product</td>
+              <td>#</td>
+              <td>CP Lv20</td>
+              <td>CP Lv25</td>
+            </tr>
+          </thead>
+          <tbody id="result"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <p id="raidcp-data-status" class="data-status">Loading Pokemon data for the picker…</p>
+  </section>
+
+  <script>
+    import { initRaidCpPage } from "../scripts/raidcp";
+
+    initRaidCpPage();
+  </script>
+</BaseLayout>
