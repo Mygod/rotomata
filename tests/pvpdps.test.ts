@@ -324,6 +324,91 @@ describe("pvpdps", () => {
     expect(masterfile.pokemon["646"].forms?.["147"].eliteChargedMoves).toEqual([466]);
   });
 
+  it("applies temporary Forever Forward move and learnset patches", () => {
+    const masterfile = applyMasterfilePatches({
+      pokemon: {
+        "18": {
+          name: "Pidgeot",
+          pokedexId: 18,
+          chargedMoves: [122]
+        },
+        "145": {
+          name: "Zapdos",
+          pokedexId: 145,
+          quickMoves: [249],
+          forms: {
+            "2800": {
+              name: "Galarian",
+              form: 2800,
+              quickMoves: [243]
+            }
+          }
+        },
+        "166": {
+          name: "Ledian",
+          pokedexId: 166,
+          quickMoves: [201],
+          chargedMoves: [45]
+        },
+        "464": {
+          name: "Rhyperior",
+          pokedexId: 464,
+          chargedMoves: [46]
+        },
+        "705": {
+          name: "Sliggoo",
+          pokedexId: 705,
+          quickMoves: [221],
+          chargedMoves: [82]
+        }
+      },
+      types: {},
+      moves: {
+        "31": {
+          id: 31,
+          name: "Earthquake",
+          pvpPower: 110
+        },
+        "36": {
+          id: 36,
+          name: "Flash Cannon",
+          pvpEnergyDelta: -70
+        },
+        "46": {
+          id: 46,
+          name: "Drill Run",
+          pvpPower: 80,
+          pvpEnergyDelta: -45
+        },
+        "320": {
+          id: 320,
+          name: "Charm",
+          pvpPower: 13
+        },
+        "345": {
+          id: 345,
+          name: "Gust",
+          pvpEnergyDelta: 12
+        }
+      }
+    });
+
+    expect(masterfile.moves["31"].pvpPower).toBe(120);
+    expect(masterfile.moves["36"].pvpEnergyDelta).toBe(-65);
+    expect(masterfile.moves["46"].pvpPower).toBe(70);
+    expect(masterfile.moves["46"].pvpEnergyDelta).toBe(-40);
+    expect(masterfile.moves["320"].pvpPower).toBe(12);
+    expect(masterfile.moves["345"].pvpEnergyDelta).toBe(13);
+    expect(masterfile.pokemon["18"].chargedMoves).toEqual([122, 80]);
+    expect(masterfile.pokemon["145"].quickMoves).toEqual([249]);
+    expect(masterfile.pokemon["145"].forms?.["2800"].quickMoves).toEqual([243, 207]);
+    expect(masterfile.pokemon["166"].quickMoves).toEqual([201, 368]);
+    expect(masterfile.pokemon["166"].chargedMoves).toEqual([45, 364]);
+    expect(masterfile.pokemon["464"].chargedMoves).toEqual([46]);
+    expect(masterfile.pokemon["705"].quickMoves).toEqual([221, 204]);
+    expect(masterfile.pokemon["705"].chargedMoves).toEqual([82, 131]);
+  });
+
   it("changes the top attacker with defender-type filters", () => {
     const masterfile = createBaseMasterfile({
       "1": createPokemon("Firemon", 1, [10], [401], [501], 150, 150, 150),

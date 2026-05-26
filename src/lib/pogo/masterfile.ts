@@ -115,6 +115,21 @@ interface EliteChargedMovePatch {
   moveIds: number[];
 }
 
+type MoveListKey = "quickMoves" | "chargedMoves" | "eliteQuickMoves" | "eliteChargedMoves";
+
+interface TemporaryMoveStatPatch {
+  moveId: number;
+  pvpPower?: number;
+  pvpEnergyDelta?: number;
+}
+
+interface TemporaryLearnsetPatch {
+  pokemonId: number;
+  formId?: number;
+  moveList: MoveListKey;
+  moveIds: number[];
+}
+
 const MASTERFILE_URL =
   "https://raw.githubusercontent.com/WatWowMap/Masterfile-Generator/master/master-latest-rotomata.json";
 
@@ -131,34 +146,103 @@ const ELITE_CHARGED_MOVE_PATCHES: EliteChargedMovePatch[] = [
   { pokemonId: 889, formId: 2578, moveIds: [470] }
 ];
 
+const TEMPORARY_MOVE_STAT_PATCHES: TemporaryMoveStatPatch[] = [
+  { moveId: 46, pvpPower: 70, pvpEnergyDelta: -40 },
+  { moveId: 36, pvpEnergyDelta: -65 },
+  { moveId: 122, pvpEnergyDelta: -60 },
+  { moveId: 384, pvpPower: 110, pvpEnergyDelta: -65 },
+  { moveId: 304, pvpEnergyDelta: -50 },
+  { moveId: 345, pvpEnergyDelta: 13 },
+  { moveId: 320, pvpPower: 12 },
+  { moveId: 13, pvpPower: 70 },
+  { moveId: 273, pvpPower: 80, pvpEnergyDelta: -50 },
+  { moveId: 262, pvpPower: 75 },
+  { moveId: 31, pvpPower: 120 }
+];
+
+const TEMPORARY_LEARNSET_PATCHES: TemporaryLearnsetPatch[] = [
+  { pokemonId: 705, moveList: "quickMoves", moveIds: [204] },
+  { pokemonId: 18, moveList: "chargedMoves", moveIds: [80] },
+  { pokemonId: 226, moveList: "chargedMoves", moveIds: [80] },
+  { pokemonId: 352, moveList: "chargedMoves", moveIds: [77, 246] },
+  { pokemonId: 428, moveList: "chargedMoves", moveIds: [77, 70] },
+  { pokemonId: 683, moveList: "quickMoves", moveIds: [350] },
+  { pokemonId: 700, moveList: "quickMoves", moveIds: [350] },
+  { pokemonId: 809, moveList: "chargedMoves", moveIds: [246] },
+  { pokemonId: 534, moveList: "quickMoves", moveIds: [462] },
+  { pokemonId: 145, formId: 2800, moveList: "quickMoves", moveIds: [207] },
+  { pokemonId: 914, moveList: "quickMoves", moveIds: [207] },
+  { pokemonId: 166, moveList: "chargedMoves", moveIds: [364] },
+  { pokemonId: 457, moveList: "quickMoves", moveIds: [345] },
+  { pokemonId: 581, moveList: "quickMoves", moveIds: [345] },
+  { pokemonId: 537, moveList: "chargedMoves", moveIds: [111] },
+  { pokemonId: 705, moveList: "chargedMoves", moveIds: [131] },
+  { pokemonId: 526, moveList: "quickMoves", moveIds: [325] },
+  { pokemonId: 166, moveList: "quickMoves", moveIds: [368] },
+  { pokemonId: 121, moveList: "chargedMoves", moveIds: [57] },
+  { pokemonId: 141, moveList: "chargedMoves", moveIds: [57] },
+  { pokemonId: 581, moveList: "chargedMoves", moveIds: [57] },
+  { pokemonId: 230, moveList: "chargedMoves", moveIds: [284] },
+  { pokemonId: 178, moveList: "chargedMoves", moveIds: [70] },
+  { pokemonId: 211, moveList: "chargedMoves", moveIds: [70] },
+  { pokemonId: 700, moveList: "chargedMoves", moveIds: [70] },
+  { pokemonId: 464, moveList: "chargedMoves", moveIds: [46] }
+];
+
 let pendingFetch: Promise<Masterfile> | null = null;
 
-function ensureEliteChargedMoves(
-  target: Pick<MasterfilePokemon, "eliteChargedMoves"> | Pick<MasterfileForm, "eliteChargedMoves">,
+function ensureMoveIds(
+  target: MasterfilePokemon | MasterfileForm,
+  moveList: MoveListKey,
   moveIds: number[]
 ): void {
-  const existing = new Set(target.eliteChargedMoves ?? []);
+  const existing = new Set(target[moveList] ?? []);
   for (const moveId of moveIds) {
     existing.add(moveId);
   }
-  target.eliteChargedMoves = Array.from(existing);
+  target[moveList] = Array.from(existing);
+}
+
+function resolvePatchTarget(
+  masterfile: Masterfile,
+  patch: Pick<EliteChargedMovePatch | TemporaryLearnsetPatch, "pokemonId" | "formId">
+): MasterfilePokemon | MasterfileForm | null {
+  const pokemon = masterfile.pokemon[String(patch.pokemonId)];
+  if (!pokemon) {
+    return null;
+  }
+  if (patch.formId === undefined) {
+    return pokemon;
+  }
+  return pokemon.forms?.[String(patch.formId)] ?? null;
 }
 
 export function applyMasterfilePatches(masterfile: Masterfile): Masterfile {
+  for (const patch of TEMPORARY_MOVE_STAT_PATCHES) {
+    const move = masterfile.moves[String(patch.moveId)];
+    if (!move) {
+      continue;
+    }
+    if (patch.pvpPower !== undefined) {
+      move.pvpPower = patch.pvpPower;
+    }
+    if (patch.pvpEnergyDelta !== undefined) {
+      move.pvpEnergyDelta = patch.pvpEnergyDelta;
+    }
+  }
   for (const patch of ELITE_CHARGED_MOVE_PATCHES) {
-    const pokemon = masterfile.pokemon[String(patch.pokemonId)];
-    if (!pokemon) {
+    const target = resolvePatchTarget(masterfile, patch);
+    if (!target) {
       continue;
     }
-    if (patch.formId === undefined) {
-      ensureEliteChargedMoves(pokemon, patch.moveIds);
+    ensureMoveIds(target, "eliteChargedMoves", patch.moveIds);
+  }
+  for (const patch of TEMPORARY_LEARNSET_PATCHES) {
+    const target = resolvePatchTarget(masterfile, patch);
+    if (!target) {
       continue;
     }
-    const form = pokemon.forms?.[String(patch.formId)];
-    if (!form) {
-      continue;
-    }
-    ensureEliteChargedMoves(form, patch.moveIds);
+    ensureMoveIds(target, patch.moveList, patch.moveIds);
   }
   return masterfile;
 }
