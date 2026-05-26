@@ -12,6 +12,8 @@ export interface HardRaidEntry {
 
 const BOSS_CPM = [0.5974, 0.73, 0.79];
 const BOSS_HP = [600 / 180, 1800 / 180, 3600 / 180, 9000 / 180, 9000 / 300, 15000 / 300, 20000 / 300, 22500 / 300];
+const SUPER_MEGA_EFFECTIVE_HP = (25000 - 20000 + 20000 * 4) / 300;
+const SUPER_MEGA_ATTACK_MULTIPLIER = 1.8;
 const TEMP_EVOLUTION_NAMES: Record<string, string> = {
   "1": "Mega",
   "2": "Mega X",
@@ -21,6 +23,12 @@ const TEMP_EVOLUTION_NAMES: Record<string, string> = {
 };
 const ENABLE_T4 = false;
 const LEGENDARY_OVERRIDES = new Set([1009, 1010, 1014, 1015, 1016, 1017, 1020, 1021, 1022, 1023, 1024, 1025]);
+
+interface PushRaidEntryOptions {
+  formName?: string;
+  isTempEvo?: boolean;
+  isSuperMega?: boolean;
+}
 
 function resolveStats(carrier: { stats?: MasterfileStats } | undefined, fallback: MasterfilePokemon): MasterfileStats | null {
   return carrier?.stats ?? fallback.stats ?? null;
@@ -72,19 +80,23 @@ function pushRaidEntry(
   masterfile: Masterfile,
   pokemon: MasterfilePokemon,
   carrier?: { name?: string; stats?: MasterfileStats; types?: Record<string, MasterfileTypeRef>; evolutions?: Record<string, MasterfileEvolutionRef> },
-  formName = "",
-  isTempEvo = false
+  options: PushRaidEntryOptions = {}
 ): void {
   const source = carrier ?? pokemon;
   const stats = resolveStats(source, pokemon);
   if (!stats) {
     return;
   }
-  isTempEvo ||= formName === "Ultra";
+  const formName = options.formName ?? "";
+  const isTempEvo = options.isTempEvo || formName === "Ultra";
   let hp: number;
   let cpm: number;
   let tier: string;
-  if (pokemon.legendary || pokemon.mythic || pokemon.ultraBeast) {
+  let attackMultiplier = 1;
+  if (options.isSuperMega) {
+    [hp, cpm, tier] = [SUPER_MEGA_EFFECTIVE_HP, BOSS_CPM[2], "T7"];
+    attackMultiplier = SUPER_MEGA_ATTACK_MULTIPLIER;
+  } else if (pokemon.legendary || pokemon.mythic || pokemon.ultraBeast) {
     [hp, cpm, tier] = isTempEvo ? [BOSS_HP[7], BOSS_CPM[2], "T6"] : [BOSS_HP[5], BOSS_CPM[2], "T5"];
   } else if (isTempEvo) {
     [hp, cpm, tier] = [BOSS_HP[4], BOSS_CPM[2], "Mega"];
@@ -101,7 +113,7 @@ function pushRaidEntry(
     pokemon: pokemon.name,
     form: formName,
     tier,
-    attack: stats.attack * cpm + 15,
+    attack: (stats.attack * cpm + 15) * attackMultiplier,
     defense,
     hp,
     bulk: defense * hp
@@ -118,25 +130,24 @@ export function buildHardRaidEntries(masterfile: Masterfile): HardRaidEntry[] {
     pushRaidEntry(results, masterfile, pokemonWithOverrides);
     for (const form of Object.values(pokemon.forms ?? {})) {
       if (form.stats || form.types) {
-        pushRaidEntry(results, masterfile, pokemonWithOverrides, form, form.name ?? "");
+        pushRaidEntry(results, masterfile, pokemonWithOverrides, form, { formName: form.name ?? "" });
       }
     }
     for (const tempEvolution of Object.values(pokemon.tempEvolutions ?? {})) {
       const tempEvolutionId = String(tempEvolution.tempEvoId ?? "");
       if (tempEvolutionId && !tempEvolutionId.endsWith("Gmax")) {
-        pushRaidEntry(
-          results,
-          masterfile,
-          pokemonWithOverrides,
-          tempEvolution,
-          TEMP_EVOLUTION_NAMES[tempEvolutionId] ?? "",
-          true
-        );
+        const formName = TEMP_EVOLUTION_NAMES[tempEvolutionId] ?? "";
+        pushRaidEntry(results, masterfile, pokemonWithOverrides, tempEvolution, { formName, isTempEvo: true });
+        pushRaidEntry(results, masterfile, pokemonWithOverrides, tempEvolution, {
+          formName,
+          isTempEvo: true,
+          isSuperMega: true
+        });
       }
     }
   }
   results.sort((a, b) => b.bulk - a.bulk);
-  const salamenceIndex = results.findIndex((entry) => entry.pokemon === "Salamence");
+  const salamenceIndex = results.findIndex((entry) => entry.pokemon === "Salamence" && entry.tier !== "T7");
   return salamenceIndex >= 0 ? results.slice(0, salamenceIndex + 1) : results;
 }
 

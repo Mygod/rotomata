@@ -1145,6 +1145,20 @@ describe("CodePen parity helpers", () => {
           types: {
             "3": { typeId: 3, typeName: "Flying" },
             "16": { typeId: 16, typeName: "Dragon" }
+          },
+          tempEvolutions: {
+            "1": {
+              tempEvoId: 1,
+              stats: {
+                attack: 310,
+                defense: 251,
+                stamina: 216
+              },
+              types: {
+                "3": { typeId: 3, typeName: "Flying" },
+                "16": { typeId: 16, typeName: "Dragon" }
+              }
+            }
           }
         },
         "464": {
@@ -1282,11 +1296,16 @@ describe("CodePen parity helpers", () => {
       moves: {}
     });
     expect(entries.map((entry) => `${entry.pokemon}:${entry.form}:${entry.tier}`)).toEqual([
+      "Salamence:Mega:T7",
+      "Charizard:Mega X:T7",
       "Blacephalon::T5",
-      "Charizard:Mega X:Mega",
-      "Salamence::T3"
+      "Salamence:Mega:Mega"
     ]);
-    expect(entries[0].bulk).toBeCloseTo((148 * 0.79 + 15) * 50);
-    expect(entries[2].pokemon).toBe("Salamence");
+    expect(entries[0].attack).toBeCloseTo((310 * 0.79 + 15) * 1.8);
+    expect(entries[0].defense).toBeCloseTo(251 * 0.79 + 15);
+    expect(entries[0].hp).toBeCloseTo((5000 + 20000 * 4) / 300);
+    expect(entries[0].bulk).toBeCloseTo((251 * 0.79 + 15) * ((5000 + 20000 * 4) / 300));
+    expect(entries[2].bulk).toBeCloseTo((148 * 0.79 + 15) * 50);
+    expect(entries[3].bulk).toBeCloseTo((251 * 0.79 + 15) * 30);
   });
 });
