@@ -1,4 +1,4 @@
-import { calculateStats, type BaseStats } from "./parity";
+import { calculateCP, calculateStats, type BaseStats } from "./parity";
 import { buildRankedIvRow, buildRankedIvTable, type RankedIvRow, type RankedIvStat } from "./rankedIv";
 
 export type RaidCpHpMode = "full" | "functional" | "any";
@@ -72,7 +72,7 @@ function matchesPurifiedTarget(stats: BaseStats, stat: RankedIvStat, target: Rai
 
 export function buildRaidCpResult(input: RaidCpInput, detailBaseUrl: URL): RaidCpResult {
   const table = buildRankedIvTable(input.stats, RAID_CP_CAP, RAID_LEVEL_CAP, input.ivFloor);
-  const rows: RankedIvRow[] = [];
+  const matchedStats: RankedIvStat[] = [];
   for (const stat of table.allStats) {
     if (
       !matchesTarget(input.stats, stat.a, stat.d, stat.s, input.naturalTarget) &&
@@ -80,7 +80,15 @@ export function buildRaidCpResult(input: RaidCpInput, detailBaseUrl: URL): RaidC
     ) {
       continue;
     }
-    rows.push(buildRankedIvRow(stat, {
+    matchedStats.push(stat);
+  }
+  matchedStats.sort(
+    (a, b) =>
+      calculateCP(input.stats, b.a, b.d, b.s, 20) - calculateCP(input.stats, a.a, a.d, a.s, 20) ||
+      calculateCP(input.stats, b.a, b.d, b.s, 25) - calculateCP(input.stats, a.a, a.d, a.s, 25)
+  );
+  const rows = matchedStats.map((stat) =>
+    buildRankedIvRow(stat, {
       stats: input.stats,
       statsString: input.statsString,
       cpCap: RAID_CP_CAP,
@@ -89,8 +97,8 @@ export function buildRaidCpResult(input: RaidCpInput, detailBaseUrl: URL): RaidC
       detailBaseUrl,
       best: table.best,
       worst: table.worst
-    }));
-  }
+    })
+  );
   return {
     rows,
     returnedCount: rows.length,

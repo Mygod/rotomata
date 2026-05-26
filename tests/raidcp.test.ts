@@ -129,4 +129,23 @@ describe("Raid CP Filter", () => {
 
     expect(ivs(result)).not.toContain("13/13/13");
   });
+
+  it("sorts by raid CP at Lv20, then Lv25, descending", () => {
+    const stats = {
+      attack: 100,
+      defense: 100,
+      stamina: 100
+    };
+    const result = buildRaidCpResult(
+      input(stats, {
+        ivFloor: 14
+      }),
+      detailUrl
+    );
+    const cpPairs = result.rows.map((entry) => [Number(entry.cp20), Number(entry.cp25)]);
+
+    expect(cpPairs).toEqual(
+      [...cpPairs].sort((a, b) => b[0] - a[0] || b[1] - a[1])
+    );
+  });
 });
