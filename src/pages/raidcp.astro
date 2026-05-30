@@ -28,21 +28,21 @@ import BaseLayout from "../layouts/BaseLayout.astro";
           <div class="filter-heading"><em>Keep raid bosses matching</em></div>
           <div class="filter-options">
             <label class="checkbox-row" for="fullatk">
-              <input type="checkbox" id="fullatk" />
+              <input type="checkbox" id="fullatk" checked />
               <span>15 attack</span>
             </label>
             <label class="checkbox-row" for="fulldef">
-              <input type="checkbox" id="fulldef" />
+              <input type="checkbox" id="fulldef" checked />
               <span>15 defense</span>
             </label>
             <div>
               <label for="hpmode">HP:</label>
               <select id="hpmode">
-                <option value="full">15</option>
+                <option value="full" selected>15</option>
                 <option value="functional" title="14 HP IV when it ties 15 HP at Lv20 or Lv25">
                   Functional 15
                 </option>
-                <option value="any" selected>Any</option>
+                <option value="any">Any</option>
               </select>
             </div>
           </div>

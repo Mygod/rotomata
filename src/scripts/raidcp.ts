@@ -3,14 +3,14 @@ import { parseStatsTriple } from "../lib/pogo/parity";
 import { buildRaidCpResult, type RaidCpHpMode } from "../lib/pogo/raidcp";
 
 const CHECKBOX_DEFAULTS: Record<string, boolean> = {
-  fullatk: false,
-  fulldef: false,
+  fullatk: true,
+  fulldef: true,
   purify: false,
   purifyatk: true,
   purifydef: true
 };
 const SELECT_DEFAULTS: Record<string, string> = {
-  hpmode: "any",
+  hpmode: "full",
   purifyhpmode: "full"
 };
 
