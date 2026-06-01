@@ -29,6 +29,7 @@ interface JudgeCatalogNode {
   megaStats: string[];
   evolutions: string[];
   formChanges: string[];
+  visible: boolean;
 }
 
 const TEMP_EVOLUTION_NAMES = ["Unset", "Mega", "Mega X", "Mega Y", "Primal", "Mega Z"];
@@ -192,6 +193,23 @@ function resolveEntryKey(masterfile: Masterfile, pokemonId: number, formId = 0):
 
 function buildJudgeNodes(masterfile: Masterfile): JudgeCatalogNode[] {
   const nodes: JudgeCatalogNode[] = [];
+  const referencedFormKeys = new Set<string>();
+  for (const pokemon of Object.values(masterfile.pokemon)) {
+    for (const evolution of evolutionRefs(pokemon.evolutions)) {
+      referencedFormKeys.add(resolveEntryKey(masterfile, evolution.pokemon, evolution.form ?? 0));
+    }
+    for (const formId of formChangeTargetFormIds(pokemon.formChanges)) {
+      referencedFormKeys.add(resolveEntryKey(masterfile, pokemon.pokedexId, formId));
+    }
+    for (const form of Object.values(pokemon.forms ?? {})) {
+      for (const evolution of evolutionRefs(form.evolutions)) {
+        referencedFormKeys.add(resolveEntryKey(masterfile, evolution.pokemon, evolution.form ?? 0));
+      }
+      for (const formId of formChangeTargetFormIds(form.formChanges)) {
+        referencedFormKeys.add(resolveEntryKey(masterfile, pokemon.pokedexId, formId));
+      }
+    }
+  }
   for (const [pokemonId, pokemon] of Object.entries(masterfile.pokemon)) {
     const numericId = Number(pokemonId);
     const pokemonName = pokemon.name ?? `Pokemon ${pokemonId}`;
@@ -208,7 +226,8 @@ function buildJudgeNodes(masterfile: Masterfile): JudgeCatalogNode[] {
           stats,
           megaStats: resolveMegaStats(pokemon, 0),
           evolutions: [],
-          formChanges: []
+          formChanges: [],
+          visible: true
         });
       }
       continue;
@@ -216,7 +235,8 @@ function buildJudgeNodes(masterfile: Masterfile): JudgeCatalogNode[] {
     for (const [formId, form] of Object.entries(forms)) {
       const numericFormId = Number(formId);
       const isDefaultForm = numericFormId === defaultFormId;
-      if (!isJudgePickerForm(form, isDefaultForm)) {
+      const visible = isJudgePickerForm(form, isDefaultForm);
+      if (!visible && !referencedFormKeys.has(getKey(numericId, numericFormId))) {
         continue;
       }
       const stats = resolveFormStats(pokemon, numericFormId);
@@ -231,7 +251,8 @@ function buildJudgeNodes(masterfile: Masterfile): JudgeCatalogNode[] {
         stats,
         megaStats: resolveMegaStats(pokemon, numericFormId),
         evolutions: [],
-        formChanges: []
+        formChanges: [],
+        visible
       });
     }
   }
@@ -294,7 +315,7 @@ export function buildPokemonCatalog(masterfile: Masterfile): PokemonCatalog {
   const nodeByKey = Object.fromEntries(judgeNodes.map((node) => [node.key, node] as const));
   return {
     statEntries,
-    judgeEntries: judgeNodes.map((node) => {
+    judgeEntries: judgeNodes.filter((node) => node.visible).map((node) => {
       const familyStats: string[] = [];
       collectFamilyStats(node.key, nodeByKey, new Set<string>(), new Set<string>(), familyStats);
       return {

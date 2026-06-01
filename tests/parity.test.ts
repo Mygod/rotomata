@@ -1027,6 +1027,76 @@ describe("CodePen parity helpers", () => {
     expect(catalog.judgeEntries[3].familyStats).toEqual(["116/93/118"]);
   });
 
+  it("expands judge families through hidden evolution target forms", () => {
+    const catalog = buildPokemonCatalog({
+      pokemon: {
+        "592": {
+          name: "Frillish",
+          pokedexId: 592,
+          defaultFormId: 2168,
+          stats: {
+            attack: 115,
+            defense: 134,
+            stamina: 146
+          },
+          forms: {
+            "2168": {
+              name: "Normal",
+              form: 2168,
+              evolutions: {
+                "593": {
+                  pokemon: 593,
+                  form: 2171
+                }
+              }
+            },
+            "2330": {
+              name: "Female",
+              form: 2330,
+              evolutions: {
+                "593": {
+                  pokemon: 593,
+                  form: 2331
+                }
+              }
+            }
+          }
+        },
+        "593": {
+          name: "Jellicent",
+          pokedexId: 593,
+          defaultFormId: 2171,
+          stats: {
+            attack: 159,
+            defense: 178,
+            stamina: 225
+          },
+          forms: {
+            "2171": {
+              name: "Normal",
+              form: 2171
+            },
+            "2331": {
+              name: "Female",
+              form: 2331
+            }
+          }
+        }
+      },
+      types: {},
+      moves: {}
+    });
+    expect(catalog.judgeEntries.map((entry) => entry.value)).toEqual([
+      "#592: Frillish",
+      "#592: Frillish (Female)",
+      "#593: Jellicent"
+    ]);
+    expect(catalog.judgeEntries[1].familyStats).toEqual([
+      "115/134/146",
+      "159/178/225"
+    ]);
+  });
+
   it("includes form changes when expanding judge families", () => {
     const catalog = buildPokemonCatalog({
       pokemon: {
