@@ -1,0 +1,532 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+
+interface TierEntry {
+  name: string;
+  rationale?: string;
+}
+
+interface Tier {
+  slug: string;
+  label: string;
+  principle: string;
+  entries: TierEntry[];
+}
+
+const originalTierList =
+  "https://tiermaker.com/list/pokemon/pokemon-mega-evolutions-18840649/6197835";
+
+const tiers: Tier[] = [
+  {
+    slug: "s",
+    label: "S",
+    principle:
+      "The three broad field-boosting powerhouses. Each boosts three types even from the back of the party, giving unmatched raid and catch-candy utility.",
+    entries: [
+      { name: "Primal Kyogre" },
+      { name: "Primal Groudon" },
+      { name: "Mega Rayquaza" },
+    ],
+  },
+  {
+    slug: "a",
+    label: "A",
+    principle:
+      "Exceptional combinations of personal damage, Party Power value, candy alignment, and relevance to the real or foreseeable raid-boss pool.",
+    entries: [
+      {
+        name: "Mega Gengar",
+        rationale:
+          "The best legacy Ghost Mega for a Party Power duo against Ghost targets. In the compared duo, Gengar plus its 30% same-type boost to a Dawn Wings teammate narrowly beats using two Dawn Wings; Gengar does not receive its own aura.",
+      },
+      {
+        name: "Mega Mewtwo X",
+        rationale:
+          "The strongest Psychic Mega option that also matches Fighting-type catch candy. Mega Mewtwo Y is slightly stronger in raw self-DPS, but does not provide that alignment.",
+      },
+      {
+        name: "Mega Lucario Z",
+        rationale:
+          "Fighting offense is excellent into Steel bosses, while Lucario's Steel typing preserves the matching catch-candy utility.",
+      },
+      {
+        name: "Mega Zygarde",
+        rationale:
+          "The broad legacy Party Power duo leader against Dragon targets: ahead of Baxcalibur against generic Dragon and 11 of the 13 Dragon type profiles checked. This is a projected placement for an unreleased Mega.",
+      },
+      {
+        name: "Mega Baxcalibur",
+        rationale:
+          "The specialist for Dragon/Flying and Dragon/Ground bosses, whose double weakness to Ice lets it decisively beat Zygarde. Mega Rayquaza and Mega Zygarde make that narrow specialization unusually relevant, and Baxcalibur still matches Dragon catch candy.",
+      },
+    ],
+  },
+  {
+    slug: "a-minus",
+    label: "A-",
+    principle:
+      "A premier role with slightly less overall value or more direct competition than the A-tier choices.",
+    entries: [
+      {
+        name: "Mega Excadrill",
+        rationale:
+          "Ground offense into Steel bosses with matching Steel candy utility, but Mega Lucario Z is generally the stronger option for that job.",
+      },
+    ],
+  },
+  {
+    slug: "b",
+    label: "B",
+    principle:
+      "Strong specialists for important bosses or rotations, but narrower or more replaceable than the tiers above.",
+    entries: [
+      {
+        name: "Mega Charizard Y",
+        rationale:
+          "A Celesteela specialist: Fire attacks its Steel typing while Charizard's Flying typing matches catch candy.",
+      },
+      {
+        name: "Mega Aerodactyl",
+        rationale:
+          "Rock offense into Flying bosses while its own Flying typing matches their catch candy.",
+      },
+      {
+        name: "Mega Tyranitar",
+        rationale:
+          "A high-value Yveltal specialist: Rock attacks its Flying typing while Tyranitar's Dark typing matches catch candy.",
+      },
+      {
+        name: "Mega Swampert",
+        rationale:
+          "Water attacks Ground bosses, and Water/Ground coverage matches both Kyogre and Groudon catch candy when they appear in the same rotation.",
+      },
+      {
+        name: "Mega Heatran",
+        rationale:
+          "Fire offense into Steel bosses with matching Steel candy utility, but generally worse than Lucario Z or Excadrill in that shared role.",
+      },
+    ],
+  },
+  {
+    slug: "c",
+    label: "C",
+    principle:
+      "Being the best legacy Party Power duo Mega for a meaningful attack type generally establishes this floor, provided the role is useful and not strategically redundant.",
+    entries: [
+      { name: "Mega Mewtwo Y" },
+      { name: "Mega Meganium" },
+      {
+        name: "Mega Gardevoir",
+        rationale:
+          "The consistent Fairy specialist, especially against bosses double-weak to Fairy. Realistic simulations can trade wins with Diancie by matchup, but Gardevoir owns the general Fairy role.",
+      },
+      { name: "Mega Chandelure" },
+      { name: "Mega Zeraora" },
+      { name: "Mega Glimmora" },
+    ],
+  },
+  {
+    slug: "c-minus",
+    label: "C-",
+    principle:
+      "The floor for a best-in-role gym Mega, or for a nominal raid-type leader whose practical raid role is substantially covered elsewhere.",
+    entries: [
+      { name: "Mega Beedrill" },
+      { name: "Mega Sceptile" },
+      {
+        name: "Mega Absol Z",
+        rationale:
+          "The best legacy Party Power duo Dark Mega, but Ghost is equal or better against nearly every relevant Psychic or Ghost boss. Mega Gengar also covers the important Ghost-boss candy niche, leaving Absol Z's raid role strategically redundant.",
+      },
+      { name: "Mega Delphox" },
+      { name: "Mega Greninja" },
+    ],
+  },
+  {
+    slug: "d-plus",
+    label: "D+",
+    principle:
+      "Unique dual-type catch-candy and raid-boost coverage establishes this floor, even without standout personal damage.",
+    entries: [
+      { name: "Mega Charizard X" },
+      { name: "Mega Pidgeot" },
+      { name: "Mega Clefable" },
+      { name: "Mega Pinsir" },
+      { name: "Mega Ampharos" },
+      { name: "Mega Heracross" },
+      { name: "Mega Skarmory" },
+      { name: "Mega Houndoom" },
+      { name: "Mega Altaria" },
+      { name: "Mega Lopunny" },
+      { name: "Mega Abomasnow" },
+      { name: "Mega Froslass" },
+      { name: "Mega Audino" },
+      { name: "Mega Scrafty" },
+      { name: "Mega Golurk" },
+      { name: "Mega Chesnaught" },
+      { name: "Mega Pyroar" },
+      { name: "Mega Malamar" },
+      { name: "Mega Barbaracle" },
+      { name: "Mega Dragalge" },
+      {
+        name: "Mega Diancie",
+        rationale:
+          "Rock/Fairy is unique coverage, and realistic simulations can favor Diancie in Rock-friendly matchups such as Yveltal. Those wins do not make it the consistent general-purpose Fairy specialist over Gardevoir.",
+      },
+      { name: "Mega Crabominable" },
+      { name: "Mega Drampa" },
+    ],
+  },
+  {
+    slug: "d",
+    label: "D",
+    principle:
+      "Useful coverage that is duplicated but not completely displaced. This tier normally contains the preferred representative of an overlapping type pair.",
+    entries: [
+      { name: "Mega Venusaur" },
+      { name: "Mega Victreebel" },
+      { name: "Mega Starmie" },
+      { name: "Mega Gyarados" },
+      {
+        name: "Mega Feraligatr",
+        rationale:
+          "The preferred Water/Dragon option, but that coverage is not unique because Mega Tatsugiri duplicates it.",
+      },
+      { name: "Mega Scizor" },
+      { name: "Mega Blaziken" },
+      { name: "Mega Metagross" },
+      { name: "Mega Staraptor" },
+      { name: "Mega Hawlucha" },
+      { name: "Mega Magearna" },
+    ],
+  },
+  {
+    slug: "e",
+    label: "E",
+    principle:
+      "A clearly worse duplicate, or coverage already handled in full by a much stronger Mega or Primal.",
+    entries: [
+      { name: "Mega Slowbro" },
+      { name: "Mega Steelix" },
+      { name: "Mega Sableye" },
+      { name: "Mega Mawile" },
+      { name: "Mega Medicham" },
+      { name: "Mega Sharpedo" },
+      { name: "Mega Chimecho" },
+      { name: "Mega Garchomp" },
+      { name: "Mega Lucario" },
+      { name: "Mega Gallade" },
+      { name: "Mega Emboar" },
+      { name: "Mega Scolipede" },
+      { name: "Mega Golisopod" },
+      { name: "Mega Scovillain" },
+      {
+        name: "Mega Tatsugiri",
+        rationale:
+          "The inferior Water/Dragon duplicate behind Feraligatr.",
+      },
+    ],
+  },
+  {
+    slug: "f",
+    label: "F",
+    principle:
+      "No meaningful combat or catch-candy niche in this model: the role is fully subsumed, too weak, or offers only monotype coverage without a compelling use case.",
+    entries: [
+      { name: "Mega Blastoise" },
+      { name: "Mega Raichu X" },
+      { name: "Mega Raichu Y" },
+      { name: "Mega Alakazam" },
+      { name: "Mega Kangaskhan" },
+      { name: "Mega Dragonite" },
+      { name: "Mega Aggron" },
+      { name: "Mega Manectric" },
+      { name: "Mega Camerupt" },
+      { name: "Mega Banette" },
+      { name: "Mega Absol" },
+      { name: "Mega Glalie" },
+      { name: "Mega Salamence" },
+      { name: "Mega Latias" },
+      { name: "Mega Latios" },
+      { name: "Mega Garchomp Z" },
+      { name: "Mega Darkrai" },
+      { name: "Mega Eelektross" },
+      { name: "Mega Floette" },
+      { name: "Mega Meowstic" },
+      { name: "Mega Falinks" },
+    ],
+  },
+];
+---
+
+<BaseLayout
+  title="Mega Tier List — Pre-+ Moves"
+  description="A historical Pokemon GO Mega and Primal tier list from before special Mega + moves were included, with raid, candy, Party Power, and gym rationales."
+>
+  <article class="tool-page mega-tier-page">
+    <header class="tool-page-header">
+      <p class="tool-kicker">Historical snapshot · pre-+ moves</p>
+      <h1>Mega Tier List</h1>
+      <p>
+        This frozen tier list records the Mega and Primal landscape before special Mega “+” moves
+        were incorporated. It is preserved as a baseline so the effect of the move update can be
+        evaluated separately rather than rewritten into history.
+      </p>
+    </header>
+
+    <aside class="archive-note" aria-label="Historical scope">
+      <div>
+        <strong>Historical scope.</strong> Ordinary pre-update movesets are used. Many listed Mega
+        Evolutions were unreleased, so those placements are projections rather than release
+        recommendations.
+      </div>
+      <a href={originalTierList} target="_blank" rel="noreferrer">
+        View the original visual tier list on TierMaker
+      </a>
+    </aside>
+
+    <section class="result-panel methodology" aria-labelledby="methodology-heading">
+      <h2 id="methodology-heading">How the tiers were judged</h2>
+      <ul>
+        <li>Catch-candy boosting potential from the Mega or Primal's types.</li>
+        <li>Raid teammate-boost utility, including value while held in the back of the party.</li>
+        <li>Party Power performance in a two-player raid and practical gym performance.</li>
+        <li>
+          The real and foreseeable raid-boss pool, not contrived theoretical matchups with no
+          meaningful boss.
+        </li>
+        <li>
+          Competition from repeatable non-Mega attackers as well as from other choices for the
+          single Mega slot.
+        </li>
+      </ul>
+      <p>
+        “Best of its type” only guarantees a high floor when that type supplies a meaningful,
+        non-redundant role against the relevant boss pool. Within each tier, entries are ordered by
+        National Pokedex number rather than strength.
+      </p>
+    </section>
+
+    <nav class="tier-jump" aria-label="Jump to tier">
+      {tiers.map((tier) => <a href={`#tier-${tier.slug}`}>{tier.label}</a>)}
+    </nav>
+
+    <div class="tier-stack">
+      {
+        tiers.map((tier) => (
+          <section
+            id={`tier-${tier.slug}`}
+            class="result-panel tier-section"
+            data-tier={tier.slug}
+            aria-labelledby={`tier-${tier.slug}-heading`}
+          >
+            <div class="tier-heading">
+              <span class="tier-marker" aria-hidden="true">{tier.label}</span>
+              <div>
+                <h2 id={`tier-${tier.slug}-heading`}>{tier.label} Tier</h2>
+                <p>{tier.principle}</p>
+              </div>
+            </div>
+            <ul class="tier-members">
+              {tier.entries.map((entry) => (
+                <li class:list={["tier-member", entry.rationale && "tier-member-detailed"]}>
+                  <strong>{entry.name}</strong>
+                  {entry.rationale && <span>{entry.rationale}</span>}
+                </li>
+              ))}
+            </ul>
+          </section>
+        ))
+      }
+    </div>
+  </article>
+</BaseLayout>
+
+<style>
+  .mega-tier-page {
+    max-width: 64rem;
+    margin: 0 auto;
+  }
+
+  .archive-note {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1rem 1.15rem;
+    border: 1px solid rgba(217, 119, 6, 0.3);
+    border-left: 0.35rem solid var(--signal-warm);
+    border-radius: 1rem;
+    background: rgba(255, 250, 241, 0.82);
+    color: var(--muted);
+    line-height: 1.5;
+  }
+
+  .archive-note strong {
+    color: var(--ink);
+  }
+
+  .archive-note a {
+    flex: 0 0 auto;
+    color: var(--signal-hot);
+    font-weight: 600;
+  }
+
+  .methodology ul {
+    display: grid;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    padding-left: 1.2rem;
+  }
+
+  .methodology p {
+    margin-bottom: 0;
+    color: var(--muted);
+    line-height: 1.55;
+  }
+
+  .tier-jump {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .tier-jump a {
+    display: inline-flex;
+    min-width: 2.75rem;
+    min-height: 2.75rem;
+    align-items: center;
+    justify-content: center;
+    padding: 0.55rem 0.8rem;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.72);
+    font-family: var(--font-mono);
+    font-weight: 600;
+    text-decoration: none;
+  }
+
+  .tier-stack {
+    display: grid;
+    gap: 1rem;
+  }
+
+  .tier-section {
+    scroll-margin-top: 1rem;
+  }
+
+  .tier-heading {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 1rem;
+    align-items: start;
+    margin-bottom: 1rem;
+  }
+
+  .tier-heading h2 {
+    margin: 0 0 0.35rem;
+  }
+
+  .tier-heading p {
+    margin: 0;
+    color: var(--muted);
+    line-height: 1.5;
+  }
+
+  .tier-marker {
+    display: inline-flex;
+    min-width: 3.4rem;
+    min-height: 3.4rem;
+    align-items: center;
+    justify-content: center;
+    padding: 0.45rem;
+    border-radius: 1rem;
+    background: var(--tier-color, var(--muted));
+    color: white;
+    font-family: var(--font-display);
+    font-size: 1.35rem;
+    font-weight: 700;
+    box-shadow: 0 0.55rem 1.2rem color-mix(in srgb, var(--tier-color, var(--muted)) 24%, transparent);
+  }
+
+  .tier-members {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.65rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .tier-member {
+    display: inline-flex;
+    padding: 0.55rem 0.8rem;
+    border: 1px solid color-mix(in srgb, var(--tier-color, var(--muted)) 26%, transparent);
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--tier-color, var(--muted)) 8%, white);
+    line-height: 1.25;
+  }
+
+  .tier-member-detailed {
+    flex: 1 1 25rem;
+    display: grid;
+    gap: 0.35rem;
+    padding: 0.85rem 1rem;
+    border-radius: 1rem;
+  }
+
+  .tier-member-detailed span {
+    color: var(--muted);
+    line-height: 1.45;
+  }
+
+  [data-tier="s"] {
+    --tier-color: #b91c1c;
+  }
+
+  [data-tier="a"],
+  [data-tier="a-minus"] {
+    --tier-color: #c2410c;
+  }
+
+  [data-tier="b"] {
+    --tier-color: #d97706;
+  }
+
+  [data-tier="c"],
+  [data-tier="c-minus"] {
+    --tier-color: #0f766e;
+  }
+
+  [data-tier="d-plus"],
+  [data-tier="d"] {
+    --tier-color: #2563eb;
+  }
+
+  [data-tier="e"] {
+    --tier-color: #64748b;
+  }
+
+  [data-tier="f"] {
+    --tier-color: #475569;
+  }
+
+  @media (max-width: 640px) {
+    .archive-note {
+      align-items: flex-start;
+      flex-direction: column;
+    }
+
+    .archive-note a {
+      flex-basis: auto;
+    }
+
+    .tier-heading {
+      grid-template-columns: 1fr;
+    }
+
+    .tier-marker {
+      justify-self: start;
+    }
+  }
+</style>
