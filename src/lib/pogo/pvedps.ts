@@ -19,6 +19,8 @@ const FIXED_IV = 15;
 const NORMAL_LEVEL = 50;
 const MEGA_LEVEL_FOUR_LEVEL = 52;
 const MEGA_LEVEL_FOUR_MOVE_MULTIPLIER = 1.3;
+const MATCHING_MEGA_TEAMMATE_MULTIPLIER = 1.3;
+const OTHER_MEGA_TEAMMATE_MULTIPLIER = 1.1;
 const HIDDEN_POWER_MOVE_ID = 281;
 const STRUGGLE_MOVE_ID = 133;
 const RETURN_MOVE_ID = 323;
@@ -73,6 +75,7 @@ interface CarrierOptions {
   availability: PvedpsAvailability;
   allowShadow: boolean;
   specialMove?: number;
+  teammateAuraTypes?: ReadonlySet<number>;
 }
 
 export type PvedpsMode = "gym" | "raid" | "party2" | "party3" | "party4";
@@ -82,6 +85,21 @@ export interface PvedpsInput {
   mode?: PvedpsMode;
   type1?: string;
   type2?: string;
+  /** Restrict ranking rows to movesets whose Charged Attack has this type. */
+  attackTypeId?: number;
+  /** Model a second Trainer using the same Mega/Primal and boosting this one's attacks. */
+  megaTeammateBoost?: boolean;
+  /** Apply one teammate's explicit Mega/Primal aura to every modeled attacker. */
+  teammateAuraTypeIds?: readonly number[];
+}
+
+interface ResolvedPvedpsInput {
+  mode: PvedpsMode;
+  type1: string;
+  type2: string;
+  attackTypeId?: number;
+  megaTeammateBoost: boolean;
+  teammateAuraTypes?: ReadonlySet<number>;
 }
 
 export interface PvedpsRow {
@@ -144,6 +162,48 @@ function resolveCarrierTypes(
   fallback?: MasterfilePokemon
 ): MasterfileTypeRef[] {
   return Object.values(carrier.types ?? fallback?.types ?? {});
+}
+
+export function listMegaAuraTypeIds(
+  masterfile: Masterfile,
+  pokemonName: string,
+  form: string,
+  carrier: MasterfileTempEvolution,
+  fallback: MasterfilePokemon
+): number[] {
+  let typeNames: string[] | undefined;
+  if (pokemonName === "Kyogre" && form === "Primal") {
+    typeNames = ["Water", "Electric", "Bug"];
+  } else if (pokemonName === "Groudon" && form === "Primal") {
+    typeNames = ["Ground", "Fire", "Grass"];
+  } else if (pokemonName === "Rayquaza" && form === "Mega") {
+    typeNames = ["Flying", "Dragon", "Psychic"];
+  }
+  if (typeNames) {
+    const wanted = new Set(typeNames);
+    return Object.values(masterfile.types)
+      .filter((type) => wanted.has(type.typeName))
+      .map((type) => type.typeId);
+  }
+  return resolveCarrierTypes(carrier, fallback).map((type) => type.typeId);
+}
+
+export function calculateMegaTeammateMoveMultiplier(
+  moveTypeId: number,
+  auraTypeIds: ReadonlySet<number>
+): number {
+  return auraTypeIds.has(moveTypeId)
+    ? MATCHING_MEGA_TEAMMATE_MULTIPLIER
+    : OTHER_MEGA_TEAMMATE_MULTIPLIER;
+}
+
+function teammateAttackMultiplier(
+  typeId: number,
+  teammateAuraTypes: ReadonlySet<number> | undefined
+): number {
+  return teammateAuraTypes
+    ? calculateMegaTeammateMoveMultiplier(typeId, teammateAuraTypes)
+    : 1;
 }
 
 function resolveCarrierStats(
@@ -288,7 +348,7 @@ function shouldSkipChargedMove(
 function pushCarrierRows(
   rows: PvedpsRow[],
   masterfile: Masterfile,
-  input: Required<PvedpsInput>,
+  input: ResolvedPvedpsInput,
   pokemonName: string,
   carrier: MasterfileForm | MasterfilePokemon | MasterfileTempEvolution,
   pokemonData: MasterfilePokemon | undefined,
@@ -329,7 +389,10 @@ function pushCarrierRows(
     }
     const testQuickMove = (moveset: Omit<PvedpsMoveset, "dps">, quickType: number): void => {
       let quickDps =
-        (DPS_SCALE * (quickMove.power ?? 0) * moveDamageMultiplier(quickType, resistanceMap1, resistanceMap2)) /
+        (DPS_SCALE *
+          (quickMove.power ?? 0) *
+          moveDamageMultiplier(quickType, resistanceMap1, resistanceMap2) *
+          teammateAttackMultiplier(quickType, options.teammateAuraTypes)) /
         quickDuration;
       if (stabTypes.has(quickType)) {
         quickDps *= STAB_MULTIPLIER;
@@ -337,11 +400,17 @@ function pushCarrierRows(
       if (partyCount) {
         quickDps *= durationMultiplier(quickMove, partyCount);
       }
-      addBestMoveset(bestMoves, { ...moveset, dps: quickDps });
+      if (input.attackTypeId === undefined) {
+        addBestMoveset(bestMoves, { ...moveset, dps: quickDps });
+      }
 
       const testChargedMove = (chargedMoveId: number): void => {
         const chargedMove = masterfile.moves[String(chargedMoveId)];
         if (!chargedMove) {
+          return;
+        }
+        const chargedType = resolveMoveTypeId(chargedMove);
+        if (input.attackTypeId !== undefined && chargedType !== input.attackTypeId) {
           return;
         }
         if (chargedMoveId === STRUGGLE_MOVE_ID) {
@@ -352,6 +421,10 @@ function pushCarrierRows(
                 DPS_SCALE *
                 (chargedMove.power ?? 0) *
                 moveDamageMultiplier(resolveMoveTypeId(chargedMove), resistanceMap1, resistanceMap2) *
+                teammateAttackMultiplier(
+                  resolveMoveTypeId(chargedMove),
+                  options.teammateAuraTypes
+                ) *
                 (1 + quicks / partyQuicks);
               if (stabTypes.has(resolveMoveTypeId(chargedMove))) {
                 chargedDamage *= STAB_MULTIPLIER;
@@ -375,13 +448,15 @@ function pushCarrierRows(
         if (shouldSkipChargedMove(masterfile, chargedMoveId, chargedMoveIds, partyCount)) {
           return;
         }
-        const chargedType = resolveMoveTypeId(chargedMove);
         const power =
           chargedMoveId === options.specialMove
             ? calculateMegaLevel4MovePower(chargedMove.power ?? 0)
             : (chargedMove.power ?? 0);
         let chargedDamage =
-          DPS_SCALE * power * moveDamageMultiplier(chargedType, resistanceMap1, resistanceMap2);
+          DPS_SCALE *
+          power *
+          moveDamageMultiplier(chargedType, resistanceMap1, resistanceMap2) *
+          teammateAttackMultiplier(chargedType, options.teammateAuraTypes);
         if (stabTypes.has(chargedType)) {
           chargedDamage *= STAB_MULTIPLIER;
         }
@@ -427,7 +502,8 @@ function pushCarrierRows(
       let dps =
         (DPS_SCALE *
           (struggle.power ?? 0) *
-          moveDamageMultiplier(struggleType, resistanceMap1, resistanceMap2)) /
+          moveDamageMultiplier(struggleType, resistanceMap1, resistanceMap2) *
+          teammateAttackMultiplier(struggleType, options.teammateAuraTypes)) /
         durationMs(struggle, partyCount);
       if (stabTypes.has(struggleType)) {
         dps *= STAB_MULTIPLIER;
@@ -488,7 +564,7 @@ function pushCarrierRows(
 function pushApexRows(
   rows: PvedpsRow[],
   masterfile: Masterfile,
-  input: Required<PvedpsInput>,
+  input: ResolvedPvedpsInput,
   pokemonName: string,
   alignment: string,
   pokemon: MasterfilePokemon | undefined,
@@ -505,6 +581,10 @@ function pushApexRows(
   }
   const chargedMove = masterfile.moves[String(chargedMoveId)];
   if (!chargedMove?.energyDelta) {
+    return;
+  }
+  const chargedType = resolveMoveTypeId(chargedMove);
+  if (input.attackTypeId !== undefined && chargedType !== input.attackTypeId) {
     return;
   }
   const resistanceMap1 = resolveTypeMultipliers(masterfile.types, input.type1);
@@ -526,16 +606,19 @@ function pushApexRows(
     }
     const testQuickMove = (moveset: Omit<PvedpsMoveset, "dps">, quickType: number): void => {
       let quickDps =
-        (DPS_SCALE * (quickMove.power ?? 0) * moveDamageMultiplier(quickType, resistanceMap1, resistanceMap2)) /
+        (DPS_SCALE *
+          (quickMove.power ?? 0) *
+          moveDamageMultiplier(quickType, resistanceMap1, resistanceMap2) *
+          teammateAttackMultiplier(quickType, input.teammateAuraTypes)) /
         quickDuration;
       if (stabTypes.has(quickType)) {
         quickDps *= STAB_MULTIPLIER;
       }
-      const chargedType = resolveMoveTypeId(chargedMove);
       let chargedDamage =
         DPS_SCALE *
         (chargedMove.power ?? 0) *
-        moveDamageMultiplier(chargedType, resistanceMap1, resistanceMap2);
+        moveDamageMultiplier(chargedType, resistanceMap1, resistanceMap2) *
+        teammateAttackMultiplier(chargedType, input.teammateAuraTypes);
       if (stabTypes.has(chargedType)) {
         chargedDamage *= STAB_MULTIPLIER;
       }
@@ -602,10 +685,17 @@ export function assertPvedpsMasterfile(masterfile: Masterfile): void {
 
 export function buildPvedpsRows(masterfile: Masterfile, input: PvedpsInput = {}): PvedpsRow[] {
   assertPvedpsMasterfile(masterfile);
-  const resolvedInput: Required<PvedpsInput> = {
+  const teammateAuraTypeIds = input.teammateAuraTypeIds ?? [];
+  if (input.megaTeammateBoost && teammateAuraTypeIds.length) {
+    throw new Error("megaTeammateBoost and teammateAuraTypeIds model different strategies");
+  }
+  const resolvedInput: ResolvedPvedpsInput = {
     mode: input.mode ?? "party2",
     type1: input.type1 ?? "None",
-    type2: input.type2 ?? "None"
+    type2: input.type2 ?? "None",
+    attackTypeId: input.attackTypeId,
+    megaTeammateBoost: input.megaTeammateBoost ?? false,
+    teammateAuraTypes: teammateAuraTypeIds.length ? new Set(teammateAuraTypeIds) : undefined
   };
   const rows: PvedpsRow[] = [];
   for (const pokemon of Object.values(masterfile.pokemon)) {
@@ -613,7 +703,8 @@ export function buildPvedpsRows(masterfile: Masterfile, input: PvedpsInput = {})
       level: NORMAL_LEVEL,
       form: "",
       availability: "Available",
-      allowShadow: true
+      allowShadow: true,
+      teammateAuraTypes: resolvedInput.teammateAuraTypes
     });
     for (const form of Object.values(pokemon.forms ?? {})) {
       if (!shouldCheckForm(form)) {
@@ -623,7 +714,8 @@ export function buildPvedpsRows(masterfile: Masterfile, input: PvedpsInput = {})
         level: NORMAL_LEVEL,
         form: form.name ?? "",
         availability: "Available",
-        allowShadow: true
+        allowShadow: true,
+        teammateAuraTypes: resolvedInput.teammateAuraTypes
       });
     }
     for (const tempEvolution of Object.values(pokemon.tempEvolutions ?? {})) {
@@ -637,7 +729,10 @@ export function buildPvedpsRows(masterfile: Masterfile, input: PvedpsInput = {})
         form,
         availability: tempEvolution.unreleased ? "Unreleased" : "Available",
         allowShadow: false,
-        specialMove: tempEvolution.specialMove
+        specialMove: tempEvolution.specialMove,
+        teammateAuraTypes: resolvedInput.megaTeammateBoost
+          ? new Set(listMegaAuraTypeIds(masterfile, pokemon.name, form, tempEvolution, pokemon))
+          : resolvedInput.teammateAuraTypes
       });
     }
   }

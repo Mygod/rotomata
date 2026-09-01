@@ -126,6 +126,169 @@ describe("pvedps", () => {
     expect(rows.some((row) => row.form === "Mega X" && row.charged === 515)).toBe(false);
   });
 
+  it("applies the teammate aura per move while leaving ordinary attackers unboosted", () => {
+    const masterfile = createMasterfile();
+    const unboosted = buildPvedpsRows(masterfile, { mode: "party2" });
+    const boosted = buildPvedpsRows(masterfile, {
+      mode: "party2",
+      megaTeammateBoost: true
+    });
+    const find = (rows: ReturnType<typeof buildPvedpsRows>, form: string) =>
+      rows.find((row) => row.pokemon === "Dragonite" && row.form === form)!;
+
+    expect(find(boosted, "Mega").dps / find(unboosted, "Mega").dps).toBeCloseTo(1.3);
+    expect(find(boosted, "").dps).toBe(find(unboosted, "").dps);
+
+    masterfile.moves["102"] = move(102, "Leaf Flick", 12, 8, 500, 8, true);
+    masterfile.moves["204"] = move(204, "Leaf Wave", 12, 120, 4000, -50, false);
+    masterfile.pokemon["149"].quickMoves = [102];
+    masterfile.pokemon["149"].chargedMoves = [204];
+    const offTypeUnboosted = buildPvedpsRows(masterfile, { mode: "party2" });
+    const offTypeBoosted = buildPvedpsRows(masterfile, {
+      mode: "party2",
+      megaTeammateBoost: true
+    });
+    expect(find(offTypeBoosted, "Mega X").dps / find(offTypeUnboosted, "Mega X").dps).toBeCloseTo(
+      1.1
+    );
+  });
+
+  it("selects the best Mega moveset after applying its exact teammate aura", () => {
+    const masterfile = createMasterfile();
+    masterfile.moves["102"] = move(102, "Leaf Flick", 12, 8, 500, 8, true);
+    masterfile.pokemon["149"].quickMoves = [100, 102];
+    const unboosted = buildPvedpsRows(masterfile, { mode: "party2" }).find(
+      (row) => row.pokemon === "Dragonite" && row.form === "Mega X"
+    );
+    const boosted = buildPvedpsRows(masterfile, {
+      mode: "party2",
+      megaTeammateBoost: true
+    }).find((row) => row.pokemon === "Dragonite" && row.form === "Mega X");
+
+    expect(unboosted?.quick).toBe(102);
+    expect(boosted?.quick).toBe(100);
+  });
+
+  it("applies an explicit background aura to ordinary attackers and reselects movesets", () => {
+    const uniformMasterfile = createMasterfile();
+    const uniformUnboosted = buildPvedpsRows(uniformMasterfile, { mode: "party2" }).find(
+      (row) => row.pokemon === "Dragonite" && row.form === ""
+    );
+    const uniformMatching = buildPvedpsRows(uniformMasterfile, {
+      mode: "party2",
+      teammateAuraTypeIds: [16]
+    }).find((row) => row.pokemon === "Dragonite" && row.form === "");
+    const uniformOther = buildPvedpsRows(uniformMasterfile, {
+      mode: "party2",
+      teammateAuraTypeIds: [12]
+    }).find((row) => row.pokemon === "Dragonite" && row.form === "");
+
+    expect(uniformMatching!.dps / uniformUnboosted!.dps).toBeCloseTo(1.3);
+    expect(uniformOther!.dps / uniformUnboosted!.dps).toBeCloseTo(1.1);
+
+    const masterfile = createMasterfile();
+    masterfile.moves["102"] = move(102, "Leaf Flick", 12, 8, 500, 8, true);
+    masterfile.pokemon["149"].quickMoves = [100, 102];
+    const unboosted = buildPvedpsRows(masterfile, { mode: "party2" }).find(
+      (row) => row.pokemon === "Dragonite" && row.form === ""
+    );
+    const dragonAura = buildPvedpsRows(masterfile, {
+      mode: "party2",
+      teammateAuraTypeIds: [16]
+    }).find((row) => row.pokemon === "Dragonite" && row.form === "");
+    const grassAura = buildPvedpsRows(masterfile, {
+      mode: "party2",
+      teammateAuraTypeIds: [12]
+    }).find((row) => row.pokemon === "Dragonite" && row.form === "");
+
+    expect(unboosted?.quick).toBe(102);
+    expect(dragonAura?.quick).toBe(100);
+    expect(grassAura!.dps).toBeGreaterThan(unboosted!.dps * 1.1);
+  });
+
+  it("applies an explicit background aura to Apex attackers", () => {
+    const masterfile = createMasterfile();
+    masterfile.pokemon["249"] = pokemon("Lugia", 249, [100], [200]);
+    masterfile.moves["360"] = move(360, "Aeroblast++", 16, 225, 3500, -100, false);
+    const unboosted = buildPvedpsRows(masterfile, { mode: "party2" }).find(
+      (row) => row.pokemon === "Lugia" && row.alignment === "Apex Shadow"
+    );
+    const boosted = buildPvedpsRows(masterfile, {
+      mode: "party2",
+      teammateAuraTypeIds: [16]
+    }).find((row) => row.pokemon === "Lugia" && row.alignment === "Apex Shadow");
+
+    expect(boosted!.dps / unboosted!.dps).toBeCloseTo(1.3);
+  });
+
+  it("rejects combining two incompatible teammate-aura strategies", () => {
+    expect(() =>
+      buildPvedpsRows(createMasterfile(), {
+        megaTeammateBoost: true,
+        teammateAuraTypeIds: [16]
+      })
+    ).toThrow("model different strategies");
+  });
+
+  it("restricts type-leader rankings to movesets with the requested Charged Attack type", () => {
+    const masterfile = createMasterfile();
+    const rows = buildPvedpsRows(masterfile, {
+      mode: "party2",
+      attackTypeId: 12
+    });
+
+    expect(rows.length).toBeGreaterThan(0);
+    expect(rows.every((row) => masterfile.moves[String(row.charged)]?.type === 12)).toBe(true);
+    expect(rows.some((row) => row.pokemon === "Dragonite")).toBe(false);
+  });
+
+  it("uses Primal weather and Mega Rayquaza coverage instead of only their own types", () => {
+    const masterfile = createMasterfile();
+    masterfile.types["2"] = type(2, "Flying");
+    masterfile.types["7"] = type(7, "Bug");
+    masterfile.types["10"] = type(10, "Water");
+    masterfile.types["13"] = type(13, "Electric");
+    masterfile.types["14"] = type(14, "Psychic");
+    masterfile.moves["102"] = move(102, "Spark", 13, 6, 500, 8, true);
+    masterfile.moves["103"] = move(103, "Confusion", 14, 6, 500, 8, true);
+    masterfile.moves["204"] = move(204, "Thunder", 13, 100, 4000, -50, false);
+    masterfile.moves["205"] = move(205, "Psychic", 14, 100, 4000, -50, false);
+    const kyogre = pokemon("Kyogre", 382, [102], [204]);
+    kyogre.types = { "10": { typeId: 10, typeName: "Water" } };
+    kyogre.tempEvolutions = {
+      "4": { tempEvoId: 4, stats: { attack: 353, defense: 268, stamina: 218 } }
+    };
+    masterfile.pokemon["382"] = kyogre;
+    const unboosted = buildPvedpsRows(masterfile, { mode: "party2" }).find(
+      (row) => row.pokemon === "Kyogre" && row.form === "Primal"
+    );
+    const boosted = buildPvedpsRows(masterfile, {
+      mode: "party2",
+      megaTeammateBoost: true
+    }).find((row) => row.pokemon === "Kyogre" && row.form === "Primal");
+
+    expect(boosted!.dps / unboosted!.dps).toBeCloseTo(1.3);
+
+    const rayquaza = pokemon("Rayquaza", 384, [103], [205]);
+    rayquaza.types = {
+      "2": { typeId: 2, typeName: "Flying" },
+      "16": { typeId: 16, typeName: "Dragon" }
+    };
+    rayquaza.tempEvolutions = {
+      "1": { tempEvoId: 1, stats: { attack: 377, defense: 210, stamina: 227 } }
+    };
+    masterfile.pokemon["384"] = rayquaza;
+    const rayquazaUnboosted = buildPvedpsRows(masterfile, { mode: "party2" }).find(
+      (row) => row.pokemon === "Rayquaza" && row.form === "Mega"
+    );
+    const rayquazaBoosted = buildPvedpsRows(masterfile, {
+      mode: "party2",
+      megaTeammateBoost: true
+    }).find((row) => row.pokemon === "Rayquaza" && row.form === "Mega");
+
+    expect(rayquazaBoosted!.dps / rayquazaUnboosted!.dps).toBeCloseTo(1.3);
+  });
+
   it("does not offer special Mega attacks in Gym mode", () => {
     const rows = buildPvedpsRows(createMasterfile(), { mode: "gym" }).filter(
       (row) => row.pokemon === "Dragonite"

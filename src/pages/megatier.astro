@@ -4,73 +4,164 @@ import BaseLayout from "../layouts/BaseLayout.astro";
 interface TierEntry {
   name: string;
   rationale?: string;
+  change?: string;
+  projection?: "Announced move" | "Unreleased";
+  evidence?: {
+    outrightAligned?: string;
+    outright?: string;
+    candyAligned?: string;
+  };
 }
 
 interface Tier {
   slug: string;
   label: string;
-  principle: string;
+  principle?: string;
   entries: TierEntry[];
 }
 
+interface PlusMove {
+  pokemon: string;
+  move: string;
+  basePower: number;
+  effectivePower: number;
+  party2Gain: string;
+}
+
+const officialMegaUpdate = "https://pokemongo.com/news/more-mega-updates-2026";
+const officialMegaSquads = "https://pokemongo.com/en/news/mega-squads-2026";
+const officialRaidPool = "https://pokemongo.com/news/road-of-legends-2026?hl=en";
+const officialMegaFinale = "https://pokemongo.com/gofest/megafinale";
+const officialHoopaRaid = "https://pokemongo.com/post/elite-raids-new-feature?hl=en";
+const officialMegaEncounter =
+  "https://niantic.helpshift.com/hc/en/6-pokemon-go/faq/3336-i-defeated-a-mega-raid-boss-but-they-turned-back-into-their-regular-form-for-the-encounter/";
+const officialMegaBoost =
+  "https://niantic.helpshift.com/hc/en/6-pokemon-go/faq/3334-using-a-mega-evolved-pokemon/";
 const originalTierList =
   "https://tiermaker.com/list/pokemon/pokemon-mega-evolutions-18840649/6197835";
+
+const plusMoves: PlusMove[] = [
+  {
+    pokemon: "Mega Beedrill",
+    move: "Fell Stinger+",
+    basePower: 140,
+    effectivePower: 182,
+    party2Gain: "+106.9%",
+  },
+  {
+    pokemon: "Mega Houndoom",
+    move: "Dark Pulse+",
+    basePower: 150,
+    effectivePower: 195,
+    party2Gain: "+55.9%",
+  },
+];
+
+const simpleEntries = (...names: string[]): TierEntry[] => names.map((name) => ({ name }));
+
+const unreleasedMegas = new Set([
+  "Mega Clefable",
+  "Mega Meganium",
+  "Mega Feraligatr",
+  "Mega Chimecho",
+  "Mega Absol Z",
+  "Mega Staraptor",
+  "Mega Garchomp Z",
+  "Mega Lucario Z",
+  "Mega Froslass",
+  "Mega Heatran",
+  "Mega Darkrai",
+  "Mega Emboar",
+  "Mega Excadrill",
+  "Mega Scolipede",
+  "Mega Scrafty",
+  "Mega Eelektross",
+  "Mega Chandelure",
+  "Mega Golurk",
+  "Mega Pyroar",
+  "Mega Floette",
+  "Mega Meowstic",
+  "Mega Barbaracle",
+  "Mega Dragalge",
+  "Mega Hawlucha",
+  "Mega Zygarde",
+  "Mega Crabominable",
+  "Mega Golisopod",
+  "Mega Drampa",
+  "Mega Magearna",
+  "Mega Zeraora",
+  "Mega Scovillain",
+  "Mega Glimmora",
+  "Mega Tatsugiri",
+  "Mega Baxcalibur",
+]);
 
 const tiers: Tier[] = [
   {
     slug: "s",
     label: "S",
-    principle:
-      "The three broad field-boosting powerhouses. Each boosts three types even from the back of the party, giving unmatched raid and catch-candy utility.",
-    entries: [
-      { name: "Primal Kyogre" },
-      { name: "Primal Groudon" },
-      { name: "Mega Rayquaza" },
-    ],
+    entries: simpleEntries("Primal Kyogre", "Primal Groudon", "Mega Rayquaza"),
   },
   {
     slug: "a",
     label: "A",
     principle:
-      "Exceptional combinations of personal damage, Party Power value, candy alignment, and relevance to the real or foreseeable raid-boss pool.",
+      "At least one modeled boss where this is simultaneously the outright fastest valid duo strategy and catch-aligned.",
     entries: [
       {
-        name: "Mega Gengar",
+        name: "Mega Victreebel",
+        change: "D → A",
         rationale:
-          "The best legacy Ghost Mega for a Party Power duo against Ghost targets. In the compared duo, Gengar plus its 30% same-type boost to a Dawn Wings teammate narrowly beats using two Dawn Wings; Gengar does not receive its own aura.",
+          "Acid and Acid Spray+ both receive 1.3× against Tapu Bulu. Victreebel is simultaneously the outright and catch-aligned leader there, beating the best background strategy—Crowned Sword Zacian supported by Primal Kyogre—by 33.7%.",
+        evidence: {
+          outrightAligned: "Tapu Bulu.",
+        },
+      },
+      {
+        name: "Mega Starmie",
+        change: "D → A",
+        rationale:
+          "Liquidation+ makes Starmie both outright and catch-aligned against Victini by 7.5% over the best background-supported non-Mega. It is also the outright leader across the modeled Fire and Ground pool by 10.4% to 52.2%, and the catch-aligned leader for Iron Boulder by 7.5%.",
+        evidence: {
+          outrightAligned: "Victini.",
+          outright:
+            "Entei; Groudon and Primal Groudon; Arceus (Fire and Ground); Incarnate and Therian Landorus; Silvally (Fire and Ground); and Blacephalon.",
+          candyAligned: "Iron Boulder.",
+        },
+      },
+      {
+        name: "Mega Dragonite",
+        change: "F → A",
+        rationale:
+          "Dragon Breath and Outrage+ both receive 1.3×. Dragonite is outright and catch-aligned on 13 Dragon profiles by 1.5% to 7.4% over the best background strategy, and remains the catch-aligned leader on 12 more by 1.1% to 7.4%.",
+        evidence: {
+          outrightAligned:
+            "Palkia and Origin Palkia; Altered and Origin Giratina; Arceus (Dragon); Reshiram; Zekrom; Silvally (Dragon); Regidrago; Miraidon; Walking Wake; Gouging Fire; and Raging Bolt.",
+          candyAligned:
+            "Latias and Mega Latias; Latios and Mega Latios; Kyurem, Black Kyurem, and White Kyurem; Guzzlord; Ultra Necrozma; Naganadel; Eternatus; and Koraidon.",
+        },
       },
       {
         name: "Mega Mewtwo X",
         rationale:
-          "The strongest Psychic Mega option that also matches Fighting-type catch candy. Mega Mewtwo Y is slightly stronger in raw self-DPS, but does not provide that alignment.",
-      },
-      {
-        name: "Mega Lucario Z",
-        rationale:
-          "Fighting offense is excellent into Steel bosses, while Lucario's Steel typing preserves the matching catch-candy utility.",
-      },
-      {
-        name: "Mega Zygarde",
-        rationale:
-          "The broad legacy Party Power duo leader against Dragon targets: ahead of Baxcalibur against generic Dragon and 11 of the 13 Dragon type profiles checked. This is a projected placement for an unreleased Mega.",
+          "Mewtwo X has three outright-and-aligned profiles, beating the best background strategy by 22.9% to 47.3%. It adds eight catch-only leadership profiles at 10.2% to 55.0% and 31 outright profiles at 15.1% to 86.7%; Dynamic Punch+ handles most Fighting offense while Psystrike supplies the aligned Psychic cases.",
+        evidence: {
+          outrightAligned:
+            "Cobalion; Crowned Shield Zamazenta; and Single Strike Urshifu.",
+          candyAligned:
+            "Arceus (Fighting); Terrakion; Meloetta and Pirouette Meloetta; Silvally (Fighting); Hero Zamazenta; Kubfu; and Okidogi.",
+          outright:
+            "Regirock, Regice, and Registeel; Dialga and Origin Dialga; Regigigas; Darkrai and Mega Darkrai; Arceus (Normal, Dark, Ice, Rock, and Steel); Kyurem, Black Kyurem, and White Kyurem; Type: Null; Silvally (Normal, Dark, Ice, Rock, and Steel); Guzzlord; Stakataka; Meltan; Melmetal; Glastrier; Chien-Pao; Ting-Lu; Chi-Yu; and Terapagos.",
+        },
       },
       {
         name: "Mega Baxcalibur",
         rationale:
-          "The specialist for Dragon/Flying and Dragon/Ground bosses, whose double weakness to Ice lets it decisively beat Zygarde. Mega Rayquaza and Mega Zygarde make that narrow specialization unusually relevant, and Baxcalibur still matches Dragon catch candy.",
-      },
-    ],
-  },
-  {
-    slug: "a-minus",
-    label: "A-",
-    principle:
-      "A premier role with slightly less overall value or more direct competition than the A-tier choices.",
-    entries: [
-      {
-        name: "Mega Excadrill",
-        rationale:
-          "Ground offense into Steel bosses with matching Steel candy utility, but Mega Lucario Z is generally the stronger option for that job.",
+          "Baxcalibur is both outright and catch-aligned on every modeled Dragon/Flying and Dragon/Ground profile. Dragon Breath plus Blizzard beats Black Kyurem supported by backline Mega Rayquaza by 4.5% against Rayquaza and Zygarde, including regular non-Mega Zygarde; it also wins outright against Sky Shaymin by 7.1%.",
+        evidence: {
+          outrightAligned: "Mega Rayquaza, Rayquaza, Mega Zygarde, and Zygarde.",
+          outright: "Sky Shaymin.",
+        },
       },
     ],
   },
@@ -78,32 +169,76 @@ const tiers: Tier[] = [
     slug: "b",
     label: "B",
     principle:
-      "Strong specialists for important bosses or rotations, but narrower or more replaceable than the tiers above.",
+      "No combined outright-and-aligned result, but at least one catch-aligned duo lead that still beats the best background-booster strategy.",
     entries: [
       {
-        name: "Mega Charizard Y",
+        name: "Mega Raichu Y",
+        change: "F → B",
         rationale:
-          "A Celesteela specialist: Fire attacks its Steel typing while Charizard's Flying typing matches catch candy.",
+          "Thunder Shock and Zap Cannon+ both receive 1.3×. Raichu Y is the catch-aligned leader for the three Electric/Flying profiles by 13.4%, and has 23 additional outright wins by 15.4% to 28.7%, but no target where those two labels coincide.",
+        evidence: {
+          candyAligned: "Zapdos; Incarnate Thundurus; and Therian Thundurus.",
+          outright:
+            "Articuno and Galarian Articuno; Moltres and Galarian Moltres; Suicune; Lugia; Ho-Oh; Kyogre and Primal Kyogre; Phione; Manaphy; Arceus (Flying and Water); Incarnate and Therian Tornadus; Yveltal; Volcanion; Silvally (Flying and Water); Tapu Fini; Celesteela; and Incarnate and Therian Enamorus.",
+        },
       },
       {
-        name: "Mega Aerodactyl",
+        name: "Mega Lopunny",
+        change: "D+ → B",
         rationale:
-          "Rock offense into Flying bosses while its own Flying typing matches their catch candy.",
+          "Low Kick and Focus Blast both receive 1.3×. Lopunny is the fastest catch-aligned strategy for the five Normal encounters, beating Pheromosa supported by Primal Kyogre by 7.3%, but Mewtwo X remains the outright Mega leader.",
+        evidence: {
+          candyAligned: "Regigigas; Arceus (Normal); Type: Null; Silvally (Normal); and Terapagos.",
+        },
       },
       {
-        name: "Mega Tyranitar",
+        name: "Mega Delphox",
+        change: "C- → B",
         rationale:
-          "A high-value Yveltal specialist: Rock attacks its Flying typing while Tyranitar's Dark typing matches catch candy.",
+          "Fire Spin and Mystical Fire+ both receive 1.3×. Delphox is the catch-aligned leader against Ice Rider Calyrex by 3.6%, and the outright leader on eight Bug or Bug/Steel profiles by 11.1% to 19.0%, without a profile combining both labels.",
+        evidence: {
+          candyAligned: "Ice Rider Calyrex.",
+          outright:
+            "Arceus (Bug); Genesect with no Drive, Burn Drive, Chill Drive, Douse Drive, or Shock Drive; Silvally (Bug); and Kartana.",
+        },
       },
       {
-        name: "Mega Swampert",
+        name: "Mega Greninja",
+        change: "C- → B",
         rationale:
-          "Water attacks Ground bosses, and Water/Ground coverage matches both Kyogre and Groudon catch candy when they appear in the same rotation.",
+          "Water Shuriken and Surf+ both receive 1.3×. Greninja is the catch-aligned duo leader against Ting-Lu, where it beats Bug Bite/Focus Blast Pheromosa supported by Primal Kyogre by 26.7%; Starmie remains the outright Mega leader.",
+        evidence: {
+          candyAligned: "Ting-Lu.",
+        },
+      },
+    ],
+  },
+  {
+    slug: "c-plus",
+    label: "C+",
+    principle:
+      "At least one outright win over the best background-booster strategy, but no qualifying catch-aligned lead.",
+    entries: [
+      {
+        name: "Mega Beedrill",
+        change: "C- → C+",
+        projection: "Announced move",
+        rationale:
+          "Projected Fell Stinger+ gives Beedrill 34 outright wins by 12.8% to 71.2% over the best backline-supported non-Mega strategy. Bug Bite and Fell Stinger+ both receive 1.3×, but none of those winning profiles also makes Beedrill the catch-aligned leader.",
+        evidence: {
+          outright:
+            "Mega Mewtwo Y; Mewtwo; Mew; Celebi; Latias and Mega Latias; Latios and Mega Latios; all four Deoxys formes; Uxie; Mesprit; Azelf; Cresselia; Shaymin; Arceus (Grass and Psychic); Meloetta; Hoopa Unbound; Silvally (Grass and Psychic); Cosmog; Cosmoem; Necrozma and Ultra Necrozma; Zarude; Calyrex and Ice Rider Calyrex; Wo-Chien; Iron Leaves; Ogerpon; and Iron Boulder.",
+        },
       },
       {
-        name: "Mega Heatran",
+        name: "Mega Mewtwo Y",
+        change: "C → C+",
         rationale:
-          "Fire offense into Steel bosses with matching Steel candy utility, but generally worse than Lucario Z or Excadrill in that shared role.",
+          "Future Sight+ now produces 25 outright wins by 15.1% to 71.6% over the best background strategy. Those targets are Fighting, Poison, or mixed profiles rather than Psychic catches, so the fully mechanical rule places Mewtwo Y in C+ rather than promoting it for raw Psychic rank alone.",
+        evidence: {
+          outright:
+            "Zapdos and Galarian Zapdos; Arceus (Fighting and Poison); Terrakion; Virizion; Incarnate and Therian Thundurus; Keldeo; Pirouette Meloetta; Silvally (Fighting and Poison); Buzzwole; Pheromosa; Marshadow; Poipole; Naganadel; Hero Zamazenta; Eternatus; Kubfu; Rapid Strike Urshifu; Koraidon; Okidogi; Fezandipiti; and Pecharunt.",
+        },
       },
     ],
   },
@@ -111,199 +246,396 @@ const tiers: Tier[] = [
     slug: "c",
     label: "C",
     principle:
-      "Being the best legacy Party Power duo Mega for a meaningful attack type generally establishes this floor, provided the role is useful and not strategically redundant.",
+      "No qualifying boss win, but the candidate is the fastest full-pool Party-of-2 strategy for at least one neutral Charged Attack type covered by its own aura.",
     entries: [
-      { name: "Mega Mewtwo Y" },
-      { name: "Mega Meganium" },
       {
-        name: "Mega Gardevoir",
+        name: "Mega Houndoom",
+        change: "D+ → C",
+        projection: "Announced move",
         rationale:
-          "The consistent Fairy specialist, especially against bosses double-weak to Fairy. Realistic simulations can trade wins with Diancie by matchup, but Gardevoir owns the general Fairy role.",
+          "With projected Dark Pulse+, Houndoom is the full-pool Party-of-2 Dark leader, 29.0% ahead of runner-up Mega Absol Z.",
       },
-      { name: "Mega Chandelure" },
-      { name: "Mega Zeraora" },
-      { name: "Mega Glimmora" },
+      {
+        name: "Mega Chesnaught",
+        change: "D+ → C",
+        rationale:
+          "Chesnaught is the full-pool Party-of-2 Grass leader, 11.3% ahead of active Primal Groudon.",
+      },
+      {
+        name: "Mega Diancie",
+        change: "D+ → C",
+        rationale:
+          "Diancie is the full-pool Party-of-2 Fairy leader, 0.8% ahead of Mega Magearna.",
+      },
+      {
+        name: "Mega Glimmora",
+        rationale:
+          "Glimmora is the full-pool Party-of-2 Rock leader, 7.2% ahead of Shadow Gigalith with the best backline boost.",
+      },
     ],
   },
   {
     slug: "c-minus",
     label: "C-",
     principle:
-      "The floor for a best-in-role gym Mega, or for a nominal raid-type leader whose practical raid role is substantially covered elsewhere.",
+      "No qualifying boss or Party-of-2 type lead, but the candidate is the fastest full-pool Gym attacker for at least one super-effective Charged Attack type covered by its own aura.",
     entries: [
-      { name: "Mega Beedrill" },
-      { name: "Mega Sceptile" },
+      {
+        name: "Mega Gengar",
+        change: "A → C-",
+        rationale:
+          "Gengar is the full-pool Gym Poison leader, 9.0% ahead of Shadow Darkrai. It does not lead Ghost or win a modeled raid-boss matchup.",
+      },
+      {
+        name: "Mega Sceptile",
+        rationale:
+          "Sceptile is the full-pool Gym Grass leader, 13.9% ahead of Mega Meganium.",
+      },
       {
         name: "Mega Absol Z",
         rationale:
-          "The best legacy Party Power duo Dark Mega, but Ghost is equal or better against nearly every relevant Psychic or Ghost boss. Mega Gengar also covers the important Ghost-boss candy niche, leaving Absol Z's raid role strategically redundant.",
+          "Absol Z is the full-pool Gym Dark leader, 4.9% ahead of Mega Zygarde.",
       },
-      { name: "Mega Delphox" },
-      { name: "Mega Greninja" },
+      {
+        name: "Mega Lucario Z",
+        change: "A → C-",
+        rationale:
+          "Lucario Z is the full-pool Gym Fighting leader by 15.1% over Mega Lucario and Steel leader by 6.8% over Dusk Mane Necrozma.",
+      },
+      {
+        name: "Mega Zygarde",
+        change: "A → C-",
+        rationale:
+          "Zygarde is the full-pool Gym Ground leader, 16.9% ahead of Shadow Therian Landorus; its Dragon/Ground coverage is otherwise duplicated by Garchomp.",
+      },
+      {
+        name: "Mega Zeraora",
+        change: "C → C-",
+        rationale:
+          "Zeraora is the full-pool Gym Electric leader, 9.9% ahead of Shadow Therian Thundurus; Raichu Y takes the Party-of-2 Electric lead.",
+      },
     ],
   },
   {
     slug: "d-plus",
     label: "D+",
     principle:
-      "Unique dual-type catch-candy and raid-boost coverage establishes this floor, even without standout personal damage.",
+      "No A–C− result, but it has a multi-type aura package with no exact duplicate and no higher-tier single Mega or Primal that strictly contains the whole package.",
     entries: [
-      { name: "Mega Charizard X" },
-      { name: "Mega Pidgeot" },
-      { name: "Mega Clefable" },
-      { name: "Mega Pinsir" },
-      { name: "Mega Ampharos" },
-      { name: "Mega Heracross" },
-      { name: "Mega Skarmory" },
-      { name: "Mega Houndoom" },
-      { name: "Mega Altaria" },
-      { name: "Mega Lopunny" },
-      { name: "Mega Abomasnow" },
-      { name: "Mega Froslass" },
-      { name: "Mega Audino" },
-      { name: "Mega Scrafty" },
-      { name: "Mega Golurk" },
-      { name: "Mega Chesnaught" },
-      { name: "Mega Pyroar" },
-      { name: "Mega Malamar" },
-      { name: "Mega Barbaracle" },
-      { name: "Mega Dragalge" },
+      ...simpleEntries(
+        "Mega Charizard X",
+        "Mega Charizard Y",
+        "Mega Pidgeot",
+        "Mega Clefable",
+        "Mega Pinsir",
+        "Mega Aerodactyl",
+        "Mega Meganium",
+        "Mega Ampharos",
+        "Mega Heracross",
+        "Mega Skarmory",
+        "Mega Tyranitar",
+        "Mega Swampert"
+      ),
       {
-        name: "Mega Diancie",
+        name: "Mega Gardevoir",
+        change: "C → D+",
         rationale:
-          "Rock/Fairy is unique coverage, and realistic simulations can favor Diancie in Rock-friendly matchups such as Yveltal. Those wins do not make it the consistent general-purpose Fairy specialist over Gardevoir.",
+          "Gardevoir has no full-pool type lead: Mega Alakazam is 0.9% faster for Gym Fairy damage. Its unduplicated Psychic/Fairy aura retains the D+ coverage floor.",
       },
-      { name: "Mega Crabominable" },
-      { name: "Mega Drampa" },
+      ...simpleEntries(
+        "Mega Altaria",
+        "Mega Abomasnow",
+        "Mega Froslass",
+        "Mega Heatran",
+        "Mega Audino",
+        "Mega Scrafty",
+        "Mega Chandelure",
+        "Mega Golurk",
+        "Mega Pyroar",
+        "Mega Malamar",
+        "Mega Barbaracle",
+        "Mega Dragalge",
+        "Mega Crabominable",
+        "Mega Drampa"
+      ),
     ],
   },
   {
     slug: "d",
     label: "D",
     principle:
-      "Useful coverage that is duplicated but not completely displaced. This tier normally contains the preferred representative of an overlapping type pair.",
-    entries: [
-      { name: "Mega Venusaur" },
-      { name: "Mega Victreebel" },
-      { name: "Mega Starmie" },
-      { name: "Mega Gyarados" },
-      {
-        name: "Mega Feraligatr",
-        rationale:
-          "The preferred Water/Dragon option, but that coverage is not unique because Mega Tatsugiri duplicates it.",
-      },
-      { name: "Mega Scizor" },
-      { name: "Mega Blaziken" },
-      { name: "Mega Metagross" },
-      { name: "Mega Staraptor" },
-      { name: "Mega Hawlucha" },
-      { name: "Mega Magearna" },
-    ],
+      "No A–C− result and the exact multi-type package is duplicated, but no exact duplicate ranks C− or higher; every such duplicate stays in D.",
+    entries: simpleEntries(
+      "Mega Feraligatr",
+      "Mega Steelix",
+      "Mega Scizor",
+      "Mega Blaziken",
+      "Mega Mawile",
+      "Mega Chimecho",
+      "Mega Metagross",
+      "Mega Latias",
+      "Mega Latios",
+      "Mega Staraptor",
+      "Mega Emboar",
+      "Mega Excadrill",
+      "Mega Hawlucha",
+      "Mega Golisopod",
+      "Mega Magearna",
+      "Mega Tatsugiri"
+    ),
   },
   {
     slug: "e",
     label: "E",
     principle:
-      "A clearly worse duplicate, or coverage already handled in full by a much stronger Mega or Primal.",
-    entries: [
-      { name: "Mega Slowbro" },
-      { name: "Mega Steelix" },
-      { name: "Mega Sableye" },
-      { name: "Mega Mawile" },
-      { name: "Mega Medicham" },
-      { name: "Mega Sharpedo" },
-      { name: "Mega Chimecho" },
-      { name: "Mega Garchomp" },
-      { name: "Mega Lucario" },
-      { name: "Mega Gallade" },
-      { name: "Mega Emboar" },
-      { name: "Mega Scolipede" },
-      { name: "Mega Golisopod" },
-      { name: "Mega Scovillain" },
-      {
-        name: "Mega Tatsugiri",
-        rationale:
-          "The inferior Water/Dragon duplicate behind Feraligatr.",
-      },
-    ],
+      "No A–C− result, and an exact coverage duplicate already ranks C− or higher.",
+    entries: simpleEntries(
+      "Mega Venusaur",
+      "Mega Slowbro",
+      "Mega Gyarados",
+      "Mega Sableye",
+      "Mega Medicham",
+      "Mega Sharpedo",
+      "Mega Salamence",
+      "Mega Garchomp",
+      "Mega Lucario",
+      "Mega Gallade",
+      "Mega Scolipede"
+    ),
   },
   {
     slug: "f",
     label: "F",
     principle:
-      "No meaningful combat or catch-candy niche in this model: the role is fully subsumed, too weak, or offers only monotype coverage without a compelling use case.",
+      "No A–C− result and either only monotype coverage, or a unique multi-type package strictly contained by a higher-tier backline aura.",
     entries: [
-      { name: "Mega Blastoise" },
-      { name: "Mega Raichu X" },
-      { name: "Mega Raichu Y" },
-      { name: "Mega Alakazam" },
-      { name: "Mega Kangaskhan" },
-      { name: "Mega Dragonite" },
-      { name: "Mega Aggron" },
-      { name: "Mega Manectric" },
-      { name: "Mega Camerupt" },
-      { name: "Mega Banette" },
-      { name: "Mega Absol" },
-      { name: "Mega Glalie" },
-      { name: "Mega Salamence" },
-      { name: "Mega Latias" },
-      { name: "Mega Latios" },
-      { name: "Mega Garchomp Z" },
-      { name: "Mega Darkrai" },
-      { name: "Mega Eelektross" },
-      { name: "Mega Floette" },
-      { name: "Mega Meowstic" },
-      { name: "Mega Falinks" },
+      ...simpleEntries(
+        "Mega Blastoise",
+        "Mega Raichu X",
+        "Mega Alakazam",
+        "Mega Kangaskhan",
+        "Mega Aggron",
+        "Mega Manectric",
+        "Mega Camerupt",
+        "Mega Banette",
+        "Mega Absol",
+        "Mega Glalie",
+        "Mega Garchomp Z",
+        "Mega Darkrai",
+        "Mega Eelektross",
+        "Mega Floette",
+        "Mega Meowstic",
+        "Mega Falinks"
+      ),
+      {
+        name: "Mega Scovillain",
+        change: "E → F",
+        rationale:
+          "Its otherwise unique Fire/Grass package is strictly contained by S-tier Primal Groudon's Fire/Grass/Ground backline aura.",
+      },
     ],
   },
 ];
+
+const tierEntries = tiers.flatMap((tier) => tier.entries);
+for (const entry of tierEntries) {
+  if (unreleasedMegas.has(entry.name) && !entry.projection) entry.projection = "Unreleased";
+}
+if (tierEntries.length !== 95 || new Set(tierEntries.map((entry) => entry.name)).size !== 95) {
+  throw new Error("Mega tier list must contain all 95 branches exactly once");
+}
 ---
 
 <BaseLayout
-  title="Mega Tier List — Pre-+ Moves"
-  description="A historical Pokemon GO Mega and Primal tier list from before special Mega + moves were included, with raid, candy, Party Power, and gym rationales."
+  title="Mega Tier List — Super Max + Moves"
+  description="Pokemon GO Mega and Primal rankings after Super Max additional Charged Attacks, covering raid damage, Party Power duos, teammate boosts, candy utility, and gyms."
 >
   <article class="tool-page mega-tier-page">
     <header class="tool-page-header">
-      <p class="tool-kicker">Historical snapshot · pre-+ moves</p>
+      <p class="tool-kicker">Current ranking · Mega Level 4 · updated August 31, 2026</p>
       <h1>Mega Tier List</h1>
       <p>
-        This frozen tier list records the Mega and Primal landscape before special Mega “+” moves
-        were incorporated. It is preserved as a baseline so the effect of the move update can be
-        evaluated separately rather than rewritten into history.
+        A mechanical Mega and Primal ranking after the Super Max “+” attack update. Party-of-2 raid
+        performance is the main combat lens. Two mutually boosted active Megas are compared against
+        the best non-Mega pair supported from the back by Primal Kyogre, Primal Groudon, or Mega
+        Rayquaza. Every tier follows an explicit combat, candy, full-pool type-leader, or coverage
+        rule.
       </p>
     </header>
 
-    <aside class="archive-note" aria-label="Historical scope">
+    <aside class="archive-note" aria-label="Historical tier list">
       <div>
-        <strong>Historical scope.</strong> Ordinary pre-update movesets are used. Many listed Mega
-        Evolutions were unreleased, so those placements are projections rather than release
-        recommendations.
+        <strong>Pre-update baseline.</strong> The original visual tier list is preserved separately
+        for comparison with the post-“+” ranking.
       </div>
       <a href={originalTierList} target="_blank" rel="noreferrer">
-        View the original visual tier list on TierMaker
+        View the pre-“+” tier list on TierMaker
       </a>
     </aside>
 
     <section class="result-panel methodology" aria-labelledby="methodology-heading">
       <h2 id="methodology-heading">How the tiers were judged</h2>
+      <p class="evidence-standard">
+        <strong>All evidence, no vibes.</strong> Every placement must resolve to a stated tier rule
+        and a reproducible calculation; every boss claim must also name the profile. Raw DPS movement
+        alone is not utility and does not automatically move a Pokemon between tiers.
+      </p>
       <ul>
-        <li>Catch-candy boosting potential from the Mega or Primal's types.</li>
-        <li>Raid teammate-boost utility, including value while held in the back of the party.</li>
-        <li>Party Power performance in a two-player raid and practical gym performance.</li>
         <li>
-          The real and foreseeable raid-boss pool, not contrived theoretical matchups with no
-          meaningful boss.
+          Every Mega and Primal attacker is modeled at level 52 with 15/15/15 IVs. Ordinary
+          attackers remain level 50.
         </li>
         <li>
-          Competition from repeatable non-Mega attackers as well as from other choices for the
-          single Mega slot.
+          An attached active “+” attack receives the exact Mega Level 4 multiplier of 1.3. Power is
+          never rounded in the calculation: Outrage+ uses 185 × 1.3 = 240.5.
+        </li>
+        <li>
+          Party Power timing is modeled for parties of two, three, and four. Party of 2 is the
+          binding raid mode; the ordinary raid and Gym modes determine only their stated type floors.
+        </li>
+        <li>
+          In the active-Mega strategy, both Trainers use the same candidate. A Mega does not boost
+          itself, so each one receives only the other Trainer's aura. Every Fast and Charged Attack
+          is evaluated independently at 1.3× when covered by that aura and 1.1× otherwise, and the
+          best moveset is selected after those multipliers apply.
+        </li>
+        <li>
+          The competing background strategy gives both Trainers the highest-DPS repeatable non-Mega
+          plus a backline Primal Kyogre, Primal Groudon, or Mega Rayquaza. The audit separately
+          reselects the non-Mega moveset under Water/Electric/Bug, Ground/Fire/Grass, and
+          Flying/Dragon/Psychic coverage, then binds to the fastest of the three strategies.
+        </li>
+        <li>
+          Both sides are symmetric duos, so the factor of two cancels: one boosted active Mega's DPS
+          is compared with one background-supported non-Mega's DPS. This is an active-segment
+          benchmark; a full six-slot faint, relobby, and backline-entry simulation can differ.
+        </li>
+        <li>
+          “Outright duo leader” means the highest mutually boosted Mega or Primal for that defense
+          profile, listed only if it also beats the binding background strategy. “Catch-aligned duo
+          leader” applies the same background check after requiring the candidate's aura to cover the
+          type of the Pokemon actually caught.
+        </li>
+        <li>
+          Tier assignment is automatic. A requires at least one result that is both outright and
+          catch-aligned. B requires a catch-aligned result but no combined result. C+ requires an
+          outright result but no catch-aligned result. The highest applicable result wins.
+        </li>
+        <li>
+          With no qualifying boss result, C requires the fastest neutral Party-of-2 strategy for a
+          Charged Attack type included in the candidate's own aura. This comparison includes every
+          mutually boosted active Mega or Primal and the best repeatable non-Mega under each of the
+          three backline auras; there is no Mega-only leaderboard.
+        </li>
+        <li>
+          C− applies the same full-pool rule to Gym damage, comparing every Mega, Primal, and
+          non-Mega attacker without a teammate aura. Normal is excluded because it cannot deal
+          super-effective damage, and additional “+” attacks are unavailable in Gym mode.
+        </li>
+        <li>
+          The remaining coverage rules are also exact. D+ is an unduplicated multi-type package. D
+          contains exact duplicates when none of those duplicates reaches C−. E applies when an exact
+          duplicate reaches C− or higher. F contains monotypes and otherwise-unique packages strictly
+          contained by a higher-tier backline aura, such as Scovillain under Primal Groudon.
+        </li>
+        <li>
+          Catch-candy alignment uses the encounter rather than the raid-boss form. Mega raids award
+          the ordinary Pokemon, fusion raids award regular Necrozma or Kyurem, and Crowned raids
+          award the Hero form. See the <a
+            href={officialMegaEncounter}
+            target="_blank"
+            rel="noreferrer">official Mega encounter rule</a
+          >.
+        </li>
+        <li>
+          All 95 numeric Mega and Primal branches in the current Game Master are ranked as attackers.
+          As targets, ordinary Mega bosses are excluded, while Legendary or Mythical Mega and Primal
+          branches remain included as requested. Unreleased branches are explicitly projections.
+        </li>
+        <li>
+          The target sweep contains 188 profiles: every Legendary, Mythical, and Ultra Beast base
+          profile in the Game Master, every distinct typed form represented there, and all 18
+          Arceus and 18 Silvally types. Unannounced profiles—including regular Zygarde and
+          Magearna—are labeled foreseeable assumptions rather than announced raids.
+        </li>
+        <li>
+          The profile sweep is a coverage check, not an equal-weight score. Survival, boss moves,
+          damage-derived energy, weather, breakpoints, relobbies, and when the backline booster
+          enters battle can change a specific raid simulation.
         </li>
       </ul>
       <p>
-        “Best of its type” only guarantees a high floor when that type supplies a meaningful,
-        non-redundant role against the relevant boss pool. Within each tier, entries are ordered by
-        National Pokedex number rather than strength.
+        The official update says additional attacks scale with Mega Level and cannot be used against
+        Gym defenders. The ordinary teammate-aura and non-stacking rules are in the <a
+          href={officialMegaBoost}
+          target="_blank"
+          rel="noreferrer">Mega battle-bonus help</a
+        >. See the <a href={officialMegaUpdate} target="_blank" rel="noreferrer"
+          >Mega Finale announcement</a
+        > for the additional-attack rules.
+        Released or announced target labels are cross-checked against <a
+          href={officialRaidPool}
+          target="_blank"
+          rel="noreferrer">Road of Legends</a
+        >, the <a href={officialMegaFinale} target="_blank" rel="noreferrer">Mega Finale</a>, and the
+        <a href={officialHoopaRaid} target="_blank" rel="noreferrer">Hoopa Unbound Elite Raid</a>.
+        Every other Game Master target is visibly treated as a foreseeable assumption. Within
+        each tier, entries are ordered by National Pokedex number rather than strength. Run <code
+          >npm run audit:megatier</code
+          > to regenerate the target pool, background comparisons, full-pool type leaders,
+        mechanical tiers, and per-boss evidence whenever the Game Master changes.
+      </p>
+    </section>
+
+    <section class="result-panel move-impact" aria-labelledby="move-impact-heading">
+      <div class="section-heading-row">
+        <div>
+          <p class="eyebrow">Pending Game Master</p>
+          <h2 id="move-impact-heading">Announced “+” attacks</h2>
+        </div>
+        <span>2 announced</span>
+      </div>
+      <p>
+        Only the two moves not yet present in the current Game Master are listed here. Party-of-2
+        gain compares the same level-52 Mega with and without the projected move before a teammate
+        aura is applied. The percentage is a combat input, not a tier score.
+      </p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Pokemon</th>
+              <th>Additional attack</th>
+              <th>Base power</th>
+              <th>Level 4 power</th>
+              <th>Party 2 gain</th>
+            </tr>
+          </thead>
+          <tbody>
+            {
+              plusMoves.map((move) => (
+                <tr>
+                  <th scope="row">{move.pokemon}</th>
+                  <td>{move.move}</td>
+                  <td>{move.basePower}</td>
+                  <td>{move.effectivePower}</td>
+                  <td>{move.party2Gain}</td>
+                </tr>
+              ))
+            }
+          </tbody>
+        </table>
+      </div>
+      <p class="projection-note">
+        <strong>Announced projection:</strong> The <a
+          href={officialMegaSquads}
+          target="_blank"
+          rel="noreferrer">Mega Squads announcement</a
+        > gives Fell Stinger+ and Dark Pulse+ base powers of 140 and 150 for September 8. Their full
+        combat records are not active in the Game Master yet. The estimates use the ordinary move's
+        duration and 100 energy, matching the permanent “+” attacks already in the Game Master, and
+        will need rechecking when the records go live. Those permanent moves are calculation inputs,
+        so they are not repeated in this table.
       </p>
     </section>
 
@@ -324,14 +656,46 @@ const tiers: Tier[] = [
               <span class="tier-marker" aria-hidden="true">{tier.label}</span>
               <div>
                 <h2 id={`tier-${tier.slug}-heading`}>{tier.label} Tier</h2>
-                <p>{tier.principle}</p>
+                {tier.principle && <p>{tier.principle}</p>}
               </div>
             </div>
             <ul class="tier-members">
               {tier.entries.map((entry) => (
-                <li class:list={["tier-member", entry.rationale && "tier-member-detailed"]}>
-                  <strong>{entry.name}</strong>
-                  {entry.rationale && <span>{entry.rationale}</span>}
+                <li
+                  class:list={[
+                    "tier-member",
+                    entry.rationale && "tier-member-detailed",
+                    entry.projection && "tier-member-projected",
+                  ]}
+                >
+                  <div class="member-title">
+                    <strong>{entry.name}</strong>
+                    {entry.change && <span class="change-badge">{entry.change}</span>}
+                    {entry.projection && <span class="projection-badge">{entry.projection}</span>}
+                  </div>
+                  {entry.rationale && <span class="member-rationale">{entry.rationale}</span>}
+                  {entry.evidence && (
+                    <dl class="matchup-evidence">
+                      {entry.evidence.outrightAligned && (
+                        <div>
+                          <dt>Outright + catch-aligned duo leader</dt>
+                          <dd>{entry.evidence.outrightAligned}</dd>
+                        </div>
+                      )}
+                      {entry.evidence.outright && (
+                        <div>
+                          <dt>Outright duo leader</dt>
+                          <dd>{entry.evidence.outright}</dd>
+                        </div>
+                      )}
+                      {entry.evidence.candyAligned && (
+                        <div>
+                          <dt>Catch-aligned duo leader</dt>
+                          <dd>{entry.evidence.candyAligned}</dd>
+                        </div>
+                      )}
+                    </dl>
+                  )}
                 </li>
               ))}
             </ul>
@@ -344,7 +708,7 @@ const tiers: Tier[] = [
 
 <style>
   .mega-tier-page {
-    max-width: 64rem;
+    max-width: 68rem;
     margin: 0 auto;
   }
 
@@ -379,10 +743,115 @@ const tiers: Tier[] = [
     padding-left: 1.2rem;
   }
 
-  .methodology p {
+  .methodology p,
+  .move-impact > p {
     margin-bottom: 0;
     color: var(--muted);
     line-height: 1.55;
+  }
+
+  .methodology .evidence-standard {
+    margin: 0 0 1rem;
+    padding: 0.8rem 0.95rem;
+    border-left: 0.25rem solid var(--signal-hot);
+    border-radius: 0.35rem 0.8rem 0.8rem 0.35rem;
+    background: color-mix(in srgb, var(--signal-hot) 7%, white);
+    color: var(--ink);
+  }
+
+  .methodology code {
+    color: var(--ink);
+    font-size: 0.88em;
+  }
+
+  .methodology a,
+  .move-impact a {
+    color: var(--signal-hot);
+    font-weight: 600;
+  }
+
+  .section-heading-row {
+    display: flex;
+    align-items: end;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 0.7rem;
+  }
+
+  .section-heading-row h2,
+  .section-heading-row p {
+    margin: 0;
+  }
+
+  .section-heading-row > span {
+    flex: 0 0 auto;
+    color: var(--muted);
+    font-family: var(--font-mono);
+    font-size: 0.84rem;
+  }
+
+  .eyebrow {
+    color: var(--signal-hot);
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .table-wrap {
+    overflow-x: auto;
+    margin-top: 1rem;
+    border: 1px solid var(--line);
+    border-radius: 0.85rem;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+    white-space: nowrap;
+  }
+
+  th,
+  td {
+    padding: 0.65rem 0.75rem;
+    border-bottom: 1px solid var(--line);
+    text-align: left;
+  }
+
+  thead th {
+    background: rgba(15, 23, 42, 0.045);
+    color: var(--muted);
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    letter-spacing: 0.025em;
+    text-transform: uppercase;
+  }
+
+  tbody tr:last-child > * {
+    border-bottom: 0;
+  }
+
+  tbody th {
+    color: var(--ink);
+    font-weight: 650;
+  }
+
+  .change-badge,
+  .projection-badge {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 999px;
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    font-weight: 700;
+    line-height: 1;
+  }
+
+  .projection-note {
+    padding-top: 0.85rem;
+    font-size: 0.9rem;
   }
 
   .tier-jump {
@@ -468,16 +937,70 @@ const tiers: Tier[] = [
   }
 
   .tier-member-detailed {
-    flex: 1 1 25rem;
+    flex: 1 1 27rem;
     display: grid;
-    gap: 0.35rem;
+    gap: 0.4rem;
     padding: 0.85rem 1rem;
     border-radius: 1rem;
   }
 
-  .tier-member-detailed span {
+  .tier-member-projected {
+    border-style: dashed;
+  }
+
+  .member-title {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+    align-items: center;
+  }
+
+  .member-rationale {
     color: var(--muted);
     line-height: 1.45;
+  }
+
+  .matchup-evidence {
+    display: grid;
+    gap: 0.45rem;
+    margin: 0.25rem 0 0;
+    padding: 0.7rem 0 0;
+    border-top: 1px solid color-mix(in srgb, var(--tier-color, var(--muted)) 18%, transparent);
+  }
+
+  .matchup-evidence > div {
+    display: grid;
+    grid-template-columns: minmax(10.5rem, 0.32fr) minmax(0, 1fr);
+    gap: 0.65rem;
+  }
+
+  .matchup-evidence dt {
+    color: var(--tier-color, var(--muted));
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.025em;
+    line-height: 1.45;
+    text-transform: uppercase;
+  }
+
+  .matchup-evidence dd {
+    margin: 0;
+    color: var(--muted);
+    font-size: 0.9rem;
+    line-height: 1.45;
+  }
+
+  .change-badge,
+  .projection-badge {
+    padding: 0.28rem 0.45rem;
+    background: color-mix(in srgb, var(--tier-color, var(--muted)) 12%, white);
+    color: var(--tier-color, var(--muted));
+  }
+
+  .projection-badge {
+    background: rgba(217, 119, 6, 0.13);
+    color: #9a5704;
   }
 
   [data-tier="s"] {
@@ -485,11 +1008,11 @@ const tiers: Tier[] = [
   }
 
   [data-tier="a"],
-  [data-tier="a-minus"] {
+  [data-tier="b"] {
     --tier-color: #c2410c;
   }
 
-  [data-tier="b"] {
+  [data-tier="c-plus"] {
     --tier-color: #d97706;
   }
 
@@ -521,12 +1044,22 @@ const tiers: Tier[] = [
       flex-basis: auto;
     }
 
+    .section-heading-row {
+      align-items: flex-start;
+      flex-direction: column;
+    }
+
     .tier-heading {
       grid-template-columns: 1fr;
     }
 
     .tier-marker {
       justify-self: start;
+    }
+
+    .matchup-evidence > div {
+      grid-template-columns: 1fr;
+      gap: 0.1rem;
     }
   }
 </style>
