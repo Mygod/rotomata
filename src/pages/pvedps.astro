@@ -1,0 +1,89 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+---
+
+<BaseLayout
+  title="PvE DPS"
+  description="Rank Pokemon GO Gym, Raid, and Party Power attackers, including level-52 Mega Level 4 and Primal attackers with their available special attacks."
+>
+  <section class="tool-page">
+    <div class="tool-page-header">
+      <h1>PvE DPS</h1>
+      <p>
+        All Mega Evolutions and Primals are modeled at Mega Level 4 and effective Pokemon level
+        52. Available special attacks use their exact 1.3× power multiplier. The teammate Mega
+        aura is not applied to the attacker itself.
+      </p>
+    </div>
+
+    <div class="tool-panel">
+      <form class="tool-form">
+        <div class="settings-row">
+          <div>
+            <label for="mode">Battle mode:</label>
+            <select id="mode">
+              <option value="gym">Gym</option>
+              <option value="raid">Raid</option>
+              <option value="party2" selected>Party of 2</option>
+              <option value="party3">Party of 3</option>
+              <option value="party4">Party of 4</option>
+            </select>
+          </div>
+          <div>
+            <label for="type1">Defender type 1:</label>
+            <select id="type1">
+              <option value="None">None</option>
+            </select>
+          </div>
+          <div>
+            <label for="type2">Defender type 2:</label>
+            <select id="type2">
+              <option value="None">None</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label for="doubleweakness">Set weakness preset:</label>
+          <select id="doubleweakness">
+            <option value="None">None</option>
+          </select>
+        </div>
+      </form>
+    </div>
+
+    <section class="result-panel">
+      <div class="tool-table-scroll">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <td>#</td>
+              <td>Pokemon</td>
+              <td>Form</td>
+              <td>Alignment</td>
+              <td>Availability</td>
+              <td>Level</td>
+              <td>CP</td>
+              <td>Quick</td>
+              <td>Charged</td>
+              <td>DPS</td>
+              <td>TDO</td>
+            </tr>
+          </thead>
+          <tbody id="result"></tbody>
+        </table>
+      </div>
+      <div class="result-actions">
+        <button type="button" id="show-more" class="button-secondary" hidden>Show more</button>
+      </div>
+    </section>
+
+    <p id="pvedps-data-status" class="data-status">Loading Pokemon data for the table…</p>
+  </section>
+
+  <script>
+    import { initPvedpsPage } from "../scripts/pvedps";
+
+    initPvedpsPage();
+  </script>
+</BaseLayout>

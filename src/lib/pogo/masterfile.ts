@@ -27,6 +27,8 @@ export interface MasterfileTempEvolution {
   tempEvoId?: number | string;
   stats?: MasterfileStats;
   types?: Record<string, MasterfileTypeRef>;
+  specialMove?: number;
+  unreleased?: boolean;
 }
 
 export interface MasterfileFormChangeBonusAttribute {
@@ -97,6 +99,7 @@ export interface MasterfileMove {
   type?: number | MasterfileTypeRef;
   power?: number;
   durationMs?: number;
+  energyDelta?: number;
   pvpPower?: number;
   pvpDurationTurns?: number;
   pvpEnergyDelta?: number;
