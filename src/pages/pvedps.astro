@@ -1,5 +1,6 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
+import { PVEDPS_WEATHER_OPTIONS } from "../lib/pogo/pvedps";
 ---
 
 <BaseLayout
@@ -12,13 +13,14 @@ import BaseLayout from "../layouts/BaseLayout.astro";
       <p>
         All Mega Evolutions and Primals are modeled at Mega Level 4 and effective Pokemon level
         52. Available special attacks use their exact 1.3× power multiplier. The teammate Mega
-        aura is not applied to the attacker itself.
+        aura is not applied to the attacker itself. Weather boosts matching Fast and Charged
+        Attack types by 1.2× and is combined with the other multipliers without rounding.
       </p>
     </div>
 
     <div class="tool-panel">
       <form class="tool-form">
-        <div class="settings-row">
+        <div class="settings-row settings-row-four">
           <div>
             <label for="mode">Battle mode:</label>
             <select id="mode">
@@ -39,6 +41,16 @@ import BaseLayout from "../layouts/BaseLayout.astro";
             <label for="type2">Defender type 2:</label>
             <select id="type2">
               <option value="None">None</option>
+            </select>
+          </div>
+          <div>
+            <label for="weather">Weather:</label>
+            <select id="weather">
+              {
+                PVEDPS_WEATHER_OPTIONS.map((weather) => (
+                  <option value={weather.value}>{weather.label}</option>
+                ))
+              }
             </select>
           </div>
         </div>

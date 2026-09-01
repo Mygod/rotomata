@@ -3,18 +3,21 @@ import {
   buildPvedpsRows,
   formatPvedpsRow,
   isPvedpsMode,
+  isPvedpsWeather,
   listPvedpsTypeNames,
   listPvedpsWeaknessPresets,
   PvedpsMasterfileError,
   type DoubleWeaknessPreset,
   type PvedpsMode,
-  type PvedpsRow
+  type PvedpsRow,
+  type PvedpsWeather
 } from "../lib/pogo/pvedps";
 
 const PAGE_SIZE = 50;
 const NO_TYPE_VALUE = "None";
 const NO_PRESET_VALUE = "None";
 const DEFAULT_MODE: PvedpsMode = "party2";
+const DEFAULT_WEATHER: PvedpsWeather = "none";
 
 function setStatus(message: string, isError = false): void {
   const status = document.getElementById("pvedps-data-status");
@@ -77,6 +80,10 @@ function updateUrl(): void {
   const url = new URL(window.location.href);
   const params = new URLSearchParams();
   params.set("mode", (document.getElementById("mode") as HTMLSelectElement).value);
+  const weather = (document.getElementById("weather") as HTMLSelectElement).value;
+  if (weather !== DEFAULT_WEATHER) {
+    params.set("weather", weather);
+  }
   updateTypeQueryParam(params, "type1", (document.getElementById("type1") as HTMLSelectElement).value);
   updateTypeQueryParam(params, "type2", (document.getElementById("type2") as HTMLSelectElement).value);
   url.search = params.toString();
@@ -134,8 +141,11 @@ export function initPvedpsPage(): void {
       }
       const modeValue = (document.getElementById("mode") as HTMLSelectElement).value;
       const mode = isPvedpsMode(modeValue) ? modeValue : DEFAULT_MODE;
+      const weatherValue = (document.getElementById("weather") as HTMLSelectElement).value;
+      const weather = isPvedpsWeather(weatherValue) ? weatherValue : DEFAULT_WEATHER;
       rows = buildPvedpsRows(masterfile, {
         mode,
+        weather,
         type1: getTypeSelect("type1").value,
         type2: getTypeSelect("type2").value
       });
@@ -159,6 +169,13 @@ export function initPvedpsPage(): void {
     const requestedMode = params.get("mode");
     modeSelect.value = isPvedpsMode(requestedMode) ? requestedMode : DEFAULT_MODE;
     modeSelect.addEventListener("change", () => sync());
+
+    const weatherSelect = document.getElementById("weather") as HTMLSelectElement;
+    const requestedWeather = params.get("weather");
+    weatherSelect.value = isPvedpsWeather(requestedWeather)
+      ? requestedWeather
+      : DEFAULT_WEATHER;
+    weatherSelect.addEventListener("change", () => sync());
 
     for (const id of ["type1", "type2"]) {
       const select = getTypeSelect(id);

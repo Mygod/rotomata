@@ -367,6 +367,10 @@ input[type="range"] {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.settings-row-four {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
 .triple-row > div,
 .settings-row > div,
 .inline-cluster > div {

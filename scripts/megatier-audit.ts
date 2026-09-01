@@ -12,18 +12,22 @@
  * its type is covered by the relevant aura, or 1.1x otherwise, and each strategy's
  * best moveset is selected after those multipliers apply.
  *
- * The C and C- type floors are full-pool comparisons. Party of 2 ranks every
- * mutually boosted active Mega/Primal against every background-booster strategy;
- * Gym ranks every Mega, Primal, and non-Mega without a teammate aura.
+ * The C and C- type floors are full-pool comparisons against a synthetic target
+ * weak only to the audited Charged Attack type. Party of 2 ranks every mutually
+ * boosted active Mega/Primal against every background-booster strategy; Gym ranks
+ * every Mega, Primal, and non-Mega without a teammate aura.
  *
  * Usage:
  *   npm run audit:megatier
  *   npm run audit:megatier -- --pokemon "Mega Gengar"
+ *   npm run audit:megatier -- --weather cloudy --pokemon "Mega Lucario Z"
  *   npm run audit:megatier -- --format json --masterfile /path/to/masterfile.json
  *   npm run audit:megatier -- --list-bosses
  */
 
+import { execFile } from "node:child_process";
 import fs from "node:fs";
+import { availableParallelism, tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -37,11 +41,22 @@ import type {
 import {
   buildPvedpsRows,
   calculateMegaTeammateMoveMultiplier,
+  calculateWeatherMoveMultiplier,
+  isPvedpsWeather,
   listMegaAuraTypeIds,
-  type PvedpsRow
+  PVEDPS_WEATHER_OPTIONS,
+  type PvedpsRow,
+  type PvedpsWeather
 } from "../src/lib/pogo/pvedps";
+import {
+  classifyMegaCombatTier,
+  parseMegaWeatherTierSummary,
+  type MegaCombatTier,
+  type MegaWeatherCombatEvidence,
+  type MegaWeatherTierAudit
+} from "../src/lib/pogo/megatier";
 
-type OutputFormat = "markdown" | "tsv" | "json";
+type OutputFormat = "markdown" | "tsv" | "json" | "summary";
 type BossCategory = "legendary" | "mythical" | "ultra-beast" | "mega";
 type BossSource =
   | "road-of-legends"
@@ -58,6 +73,8 @@ interface CliOptions {
   pokemon: string[];
   projections: boolean;
   listBosses: boolean;
+  weather: PvedpsWeather;
+  summaryOutputPath?: string;
 }
 
 interface BossProfile {
@@ -98,6 +115,8 @@ interface BackgroundResult {
   row: PvedpsRow;
   quickAuraMultiplier: number;
   chargedAuraMultiplier: number;
+  quickWeatherMultiplier: number;
+  chargedWeatherMultiplier: number;
 }
 
 interface AuditMatchup {
@@ -113,15 +132,18 @@ interface AuditMatchup {
   chargedEffectiveness: number;
   quickAuraMultiplier: number;
   chargedAuraMultiplier: number;
+  quickWeatherMultiplier: number;
+  chargedWeatherMultiplier: number;
 }
 
-type MechanicalTier = "S" | "A" | "B" | "C+" | "C" | "C-" | "D+" | "D" | "E" | "F";
+type MechanicalTier = "S" | MegaCombatTier | "C" | "C-" | "D+" | "D" | "E" | "F";
 
 interface TierAssignment {
   tier: MechanicalTier;
   party2TypeLeads: string[];
   gymTypeLeads: string[];
   coveringMegas: string[];
+  conditionalWeathers: PvedpsWeather[];
 }
 
 interface MechanicalTierAudit {
@@ -153,6 +175,7 @@ interface ProjectionResult {
 }
 
 const REPO_ROOT = fileURLToPath(new URL("../", import.meta.url));
+const SCRIPT_PATH = fileURLToPath(import.meta.url);
 const DEFAULT_MASTERFILE = path.resolve(
   REPO_ROOT,
   "../Masterfile-Generator/master-latest-rotomata.json"
@@ -182,6 +205,12 @@ const BACKGROUND_BOOSTER_TYPES = [
 ] as const;
 
 const S_TIER = new Set(["Primal Kyogre", "Primal Groudon", "Mega Rayquaza"]);
+const CONDITIONAL_WEATHERS = PVEDPS_WEATHER_OPTIONS.filter(
+  (option) => option.value !== "none"
+).map((option) => option.value);
+// Every worker ranks the full attacker pool repeatedly, so keep enough CPU and
+// memory headroom for the parent process and other development tasks.
+const MAX_WEATHER_WORKERS = 4;
 
 const ALL_TYPES = [
   "Normal",
@@ -340,8 +369,9 @@ function usage(): never {
 
 Options:
   --masterfile PATH       Rotomata masterfile (default: neighboring generator output)
-  --format FORMAT         markdown, tsv, or json (default: markdown)
+  --format FORMAT         markdown, tsv, json, or summary (default: markdown)
   --pokemon NAME          Limit output to one Mega/Primal; may be repeated
+  --weather WEATHER       none, clear, rain, partly-cloudy, cloudy, windy, snow, or fog
   --no-projections        Do not project announced Fell Stinger+ and Dark Pulse+
   --list-bosses           Print the complete modeled boss pool and exit
   --help                  Show this help`);
@@ -354,7 +384,8 @@ function parseArgs(args: string[]): CliOptions {
     format: "markdown",
     pokemon: [],
     projections: true,
-    listBosses: false
+    listBosses: false,
+    weather: "none"
   };
   for (let index = 0; index < args.length; index += 1) {
     const argument = args[index];
@@ -367,14 +398,25 @@ function parseArgs(args: string[]): CliOptions {
       result.listBosses = true;
       continue;
     }
-    if (argument === "--masterfile" || argument === "--format" || argument === "--pokemon") {
+    if (
+      argument === "--masterfile" ||
+      argument === "--format" ||
+      argument === "--pokemon" ||
+      argument === "--weather" ||
+      argument === "--summary-output"
+    ) {
       const value = args[index + 1];
       if (!value) throw new Error(`${argument} requires a value`);
       index += 1;
       if (argument === "--masterfile") result.masterfilePath = path.resolve(value);
       if (argument === "--pokemon") result.pokemon.push(value);
+      if (argument === "--summary-output") result.summaryOutputPath = path.resolve(value);
+      if (argument === "--weather") {
+        if (!isPvedpsWeather(value)) throw new Error(`Unsupported weather: ${value}`);
+        result.weather = value;
+      }
       if (argument === "--format") {
-        if (!(["markdown", "tsv", "json"] as string[]).includes(value)) {
+        if (!(["markdown", "tsv", "json", "summary"] as string[]).includes(value)) {
           throw new Error(`Unsupported format: ${value}`);
         }
         result.format = value as OutputFormat;
@@ -660,7 +702,11 @@ function listMegaIdentities(masterfile: Masterfile): MegaIdentity[] {
   );
 }
 
-function buildAudit(masterfile: Masterfile, bosses: BossProfile[]): Map<string, AuditMatchup[]> {
+function buildAudit(
+  masterfile: Masterfile,
+  bosses: BossProfile[],
+  weather: PvedpsWeather
+): Map<string, AuditMatchup[]> {
   const pokemonByName = buildPokemonNameMap(masterfile);
   const tempForms = new Set(Object.values(TEMP_EVOLUTION_NAMES));
   const backgroundBoosters = listBackgroundBoosters(masterfile);
@@ -674,11 +720,17 @@ function buildAudit(masterfile: Masterfile, bosses: BossProfile[]): Map<string, 
   for (const [typeKey, matchingBosses] of bossesByDefenseTypes) {
     const bossTypes = typeKey.split("/");
     const [type1 = "None", type2 = "None"] = bossTypes;
-    const unboostedRows = buildPvedpsRows(masterfile, { mode: "party2", type1, type2 });
+    const unboostedRows = buildPvedpsRows(masterfile, {
+      mode: "party2",
+      type1,
+      type2,
+      weather
+    });
     const rows = buildPvedpsRows(masterfile, {
       mode: "party2",
       type1,
       type2,
+      weather,
       megaTeammateBoost: true
     });
     const unboostedLeader = unboostedRows.find((row) => !tempForms.has(row.form));
@@ -689,6 +741,7 @@ function buildAudit(masterfile: Masterfile, bosses: BossProfile[]): Map<string, 
           mode: "party2",
           type1,
           type2,
+          weather,
           teammateAuraTypeIds: booster.auraTypeIds
         });
         const row = boostedRows.find((candidate) => !tempForms.has(candidate.form));
@@ -700,7 +753,9 @@ function buildAudit(masterfile: Masterfile, bosses: BossProfile[]): Map<string, 
           booster,
           row,
           quickAuraMultiplier: calculateMegaTeammateMoveMultiplier(quickType, auraTypeIds),
-          chargedAuraMultiplier: calculateMegaTeammateMoveMultiplier(chargedType, auraTypeIds)
+          chargedAuraMultiplier: calculateMegaTeammateMoveMultiplier(chargedType, auraTypeIds),
+          quickWeatherMultiplier: calculateWeatherMoveMultiplier(quickType, weather),
+          chargedWeatherMultiplier: calculateWeatherMoveMultiplier(chargedType, weather)
         };
       })
       .filter((result): result is BackgroundResult => result !== null)
@@ -785,7 +840,9 @@ function buildAudit(masterfile: Masterfile, bosses: BossProfile[]): Map<string, 
           quickEffectiveness: effectiveness(masterfile, quickType, boss.defenseTypes),
           chargedEffectiveness: effectiveness(masterfile, chargedType, boss.defenseTypes),
           quickAuraMultiplier: calculateMegaTeammateMoveMultiplier(quickType, auraTypes),
-          chargedAuraMultiplier: calculateMegaTeammateMoveMultiplier(chargedType, auraTypes)
+          chargedAuraMultiplier: calculateMegaTeammateMoveMultiplier(chargedType, auraTypes),
+          quickWeatherMultiplier: calculateWeatherMoveMultiplier(quickType, weather),
+          chargedWeatherMultiplier: calculateWeatherMoveMultiplier(chargedType, weather)
         });
         audit.set(candidate.name, existing);
       }
@@ -812,6 +869,7 @@ function buildTypeLeaderAudit(
     const rows = buildPvedpsRows(masterfile, {
       mode,
       attackTypeId: type.typeId,
+      benchmarkAttackTypeId: type.typeId,
       megaTeammateBoost: mode === "party2"
     });
     const strategies = new Map<string, PvedpsRow>();
@@ -827,6 +885,7 @@ function buildTypeLeaderAudit(
         const background = buildPvedpsRows(masterfile, {
           mode,
           attackTypeId: type.typeId,
+          benchmarkAttackTypeId: type.typeId,
           teammateAuraTypeIds: booster.auraTypeIds
         }).find((row) => !tempForms.has(row.form));
         if (background) {
@@ -897,7 +956,8 @@ function sameAura(left: MegaIdentity, right: MegaIdentity): boolean {
 
 function buildMechanicalTiers(
   masterfile: Masterfile,
-  audit: Map<string, AuditMatchup[]>
+  audit: Map<string, AuditMatchup[]>,
+  weatherAudits: ReadonlyMap<PvedpsWeather, MegaWeatherTierAudit>
 ): MechanicalTierAudit {
   const identities = listMegaIdentities(masterfile);
   const party2TypeAudit = buildTypeLeaderAudit(masterfile, "party2");
@@ -910,19 +970,43 @@ function buildMechanicalTiers(
 
   for (const identity of identities) {
     const matchups = audit.get(identity.name) ?? [];
+    const weatherConditions = (
+      predicate: (evidence: MegaWeatherCombatEvidence) => boolean
+    ): PvedpsWeather[] =>
+      CONDITIONAL_WEATHERS.filter((weather) => {
+        const evidence = weatherAudits.get(weather)?.get(identity.name);
+        return evidence !== undefined && predicate(evidence);
+      });
+    const combinedWeathers = weatherConditions((evidence) => evidence.outrightAndCatchAligned);
+    const catchAlignedWeathers = weatherConditions((evidence) => evidence.catchAligned);
+    const outrightWeathers = weatherConditions((evidence) => evidence.outright);
+    const combatTier = classifyMegaCombatTier({
+      baselineOutrightAndCatchAligned: matchups.some(
+        (matchup) => matchup.outright && matchup.candyAligned
+      ),
+      weatherOutrightAndCatchAligned: combinedWeathers.length > 0,
+      baselineCatchAligned: matchups.some((matchup) => matchup.candyAligned),
+      weatherCatchAligned: catchAlignedWeathers.length > 0,
+      baselineOutright: matchups.some((matchup) => matchup.outright),
+      weatherOutright: outrightWeathers.length > 0
+    });
     let tier: MechanicalTier | undefined;
+    let conditionalWeathers: PvedpsWeather[] = [];
     if (S_TIER.has(identity.name)) tier = "S";
-    else if (matchups.some((matchup) => matchup.outright && matchup.candyAligned)) tier = "A";
-    else if (matchups.some((matchup) => matchup.candyAligned)) tier = "B";
-    else if (matchups.some((matchup) => matchup.outright)) tier = "C+";
-    else if (party2TypesByMega.has(identity.name)) tier = "C";
+    else if (combatTier) {
+      tier = combatTier;
+      if (tier === "A-") conditionalWeathers = combinedWeathers;
+      if (tier === "B") conditionalWeathers = catchAlignedWeathers;
+      if (tier === "C+") conditionalWeathers = outrightWeathers;
+    } else if (party2TypesByMega.has(identity.name)) tier = "C";
     else if (gymTypesByMega.has(identity.name)) tier = "C-";
     if (!tier) continue;
     assignments.set(identity.name, {
       tier,
       party2TypeLeads: party2TypesByMega.get(identity.name) ?? [],
       gymTypeLeads: gymTypesByMega.get(identity.name) ?? [],
-      coveringMegas: []
+      coveringMegas: [],
+      conditionalWeathers
     });
   }
 
@@ -948,7 +1032,8 @@ function buildMechanicalTiers(
       tier,
       party2TypeLeads: [],
       gymTypeLeads: [],
-      coveringMegas: coveringMegas.map((candidate) => candidate.name)
+      coveringMegas: coveringMegas.map((candidate) => candidate.name),
+      conditionalWeathers: []
     });
   }
 
@@ -967,6 +1052,16 @@ function formatAttacker(row: PvedpsRow): string {
 
 function moveName(masterfile: Masterfile, moveId: number | undefined): string {
   return moveId === undefined ? "-" : (masterfile.moves[String(moveId)]?.name ?? `Move ${moveId}`);
+}
+
+function weatherOption(weather: PvedpsWeather) {
+  const option = PVEDPS_WEATHER_OPTIONS.find((candidate) => candidate.value === weather);
+  if (!option) throw new Error(`Missing weather definition: ${weather}`);
+  return option;
+}
+
+function moveMultipliers(aura: number, weather: number): string {
+  return `${aura.toFixed(1)}x aura, ${weather.toFixed(1)}x weather`;
 }
 
 function status(matchup: AuditMatchup): string {
@@ -994,7 +1089,21 @@ function selectedNames(audit: Map<string, AuditMatchup[]>, filters: string[]): s
     .map(([name]) => name);
 }
 
-const TIER_ORDER: MechanicalTier[] = ["S", "A", "B", "C+", "C", "C-", "D+", "D", "E", "F"];
+const TIER_ORDER: MechanicalTier[] = [
+  "S",
+  "A",
+  "A-",
+  "B+",
+  "B",
+  "B-",
+  "C+",
+  "C",
+  "C-",
+  "D+",
+  "D",
+  "E",
+  "F"
+];
 
 function tierNames(
   masterfile: Masterfile,
@@ -1012,11 +1121,15 @@ function outputMarkdown(
   projections: ProjectionResult[],
   bosses: BossProfile[],
   audit: Map<string, AuditMatchup[]>,
-  tierAudit: MechanicalTierAudit
+  tierAudit?: MechanicalTierAudit
 ): void {
+  const selectedWeather = weatherOption(options.weather);
   console.log("# Mega tier-list evidence audit\n");
   console.log(`- Masterfile: \`${options.masterfilePath}\``);
   console.log("- Mode: Party of 2; ordinary attackers level 50; Mega/Primal attackers level 52");
+  console.log(
+    `- Weather: ${selectedWeather.label}${selectedWeather.typeNames.length ? `; ${selectedWeather.typeNames.join("/")} moves receive 1.2x` : ""}`
+  );
   console.log(`- Boss profiles: ${bosses.length}`);
   console.log(
     "- Target pool: every Legendary, Mythical, and Ultra Beast base profile in the Game Master, plus distinct typed forms"
@@ -1037,32 +1150,43 @@ function outputMarkdown(
   console.log(
     "- Qualification: the mutually boosted Mega/Primal must beat the best of those three background strategies; catch-aligned also requires its aura to cover the encounter type"
   );
+  if (tierAudit) {
+    console.log(
+      `- Conditional combat tiers: ${CONDITIONAL_WEATHERS.map((weather) => weatherOption(weather).label).join(", ")} are each audited independently after moveset reselection`
+    );
+  }
   console.log(
-    "- Type floors: Party of 2 compares every active Mega/Primal with every background-supported non-Mega; Gym compares every attacker"
+    "- Type floors: the audited type is 1.6x effective and every other attack type is neutral; Party of 2 compares every active Mega/Primal with every background-supported non-Mega; Gym compares every attacker"
   );
 
-  console.log("\n## Mechanical tier result\n");
-  console.log("| Tier | Pokemon |");
-  console.log("| --- | --- |");
-  for (const tier of TIER_ORDER) {
-    console.log(`| ${tier} | ${tierNames(masterfile, tierAudit, tier).join(", ")} |`);
-  }
-
-  console.log("\n## Full-pool type comparisons\n");
-  console.log("| Mode | Attack type | Winning strategy | DPS | Next strategy | DPS | Margin |");
-  console.log("| --- | --- | --- | ---: | --- | ---: | ---: |");
-  for (const [mode, comparisons] of [
-    ["Party of 2", tierAudit.party2TypeComparisons],
-    ["Gym", tierAudit.gymTypeComparisons]
-  ] as const) {
-    for (const comparison of comparisons) {
-      const margin = comparison.runnerUpDps
-        ? `${((comparison.leaderDps / comparison.runnerUpDps - 1) * 100).toFixed(1)}%`
-        : "-";
-      console.log(
-        `| ${mode} | ${comparison.type} | ${comparison.winningStrategies.join(", ")} | ${comparison.leaderDps.toFixed(1)} | ${comparison.runnerUpStrategies.join(", ") || "-"} | ${comparison.runnerUpDps?.toFixed(1) ?? "-"} | ${margin} |`
-      );
+  if (tierAudit) {
+    console.log("\n## Mechanical tier result\n");
+    console.log("| Tier | Pokemon |");
+    console.log("| --- | --- |");
+    for (const tier of TIER_ORDER) {
+      console.log(`| ${tier} | ${tierNames(masterfile, tierAudit, tier).join(", ")} |`);
     }
+
+    console.log("\n## Full-pool type comparisons\n");
+    console.log("| Mode | Attack type | Winning strategy | DPS | Next strategy | DPS | Margin |");
+    console.log("| --- | --- | --- | ---: | --- | ---: | ---: |");
+    for (const [mode, comparisons] of [
+      ["Party of 2", tierAudit.party2TypeComparisons],
+      ["Gym", tierAudit.gymTypeComparisons]
+    ] as const) {
+      for (const comparison of comparisons) {
+        const margin = comparison.runnerUpDps
+          ? `${((comparison.leaderDps / comparison.runnerUpDps - 1) * 100).toFixed(1)}%`
+          : "-";
+        console.log(
+          `| ${mode} | ${comparison.type} | ${comparison.winningStrategies.join(", ")} | ${comparison.leaderDps.toFixed(1)} | ${comparison.runnerUpStrategies.join(", ") || "-"} | ${comparison.runnerUpDps?.toFixed(1) ?? "-"} | ${margin} |`
+        );
+      }
+    }
+  } else {
+    console.log(
+      "\nA single-weather run reports that condition's boss evidence only. Run with --weather none to generate the complete baseline-plus-weather tier assignment."
+    );
   }
 
   for (const name of selectedNames(audit, options.pokemon)) {
@@ -1081,7 +1205,7 @@ function outputMarkdown(
       const background = matchup.backgroundLeader;
       const margin = (candidate.boostedDps / background.row.dps - 1) * 100;
       console.log(
-        `| ${status(matchup)} | ${matchup.boss.label} | ${matchup.boss.defenseTypes.join("/")} | ${matchup.boss.catchTypes.join("/")} | ${candidate.auraTypes.join("/")} | ${moveName(masterfile, candidate.row.quick)} (${matchup.quickAuraMultiplier.toFixed(1)}x) / ${moveName(masterfile, candidate.row.charged)} (${matchup.chargedAuraMultiplier.toFixed(1)}x) | ${candidate.boostedDps.toFixed(1)} | ${formatAttacker(background.row)} + ${background.booster.name}; ${moveName(masterfile, background.row.quick)} (${background.quickAuraMultiplier.toFixed(1)}x) / ${moveName(masterfile, background.row.charged)} (${background.chargedAuraMultiplier.toFixed(1)}x) | ${background.row.dps.toFixed(1)} | +${margin.toFixed(1)}% |`
+        `| ${status(matchup)} | ${matchup.boss.label} | ${matchup.boss.defenseTypes.join("/")} | ${matchup.boss.catchTypes.join("/")} | ${candidate.auraTypes.join("/")} | ${moveName(masterfile, candidate.row.quick)} (${moveMultipliers(matchup.quickAuraMultiplier, matchup.quickWeatherMultiplier)}) / ${moveName(masterfile, candidate.row.charged)} (${moveMultipliers(matchup.chargedAuraMultiplier, matchup.chargedWeatherMultiplier)}) | ${candidate.boostedDps.toFixed(1)} | ${formatAttacker(background.row)} + ${background.booster.name}; ${moveName(masterfile, background.row.quick)} (${moveMultipliers(background.quickAuraMultiplier, background.quickWeatherMultiplier)}) / ${moveName(masterfile, background.row.charged)} (${moveMultipliers(background.chargedAuraMultiplier, background.chargedWeatherMultiplier)}) | ${background.row.dps.toFixed(1)} | +${margin.toFixed(1)}% |`
       );
     }
   }
@@ -1091,12 +1215,14 @@ function outputTsv(
   masterfile: Masterfile,
   options: CliOptions,
   audit: Map<string, AuditMatchup[]>,
-  tierAudit: MechanicalTierAudit
+  tierAudit?: MechanicalTierAudit
 ): void {
   console.log(
     [
       "candidate",
       "tier",
+      "tierConditionalWeathers",
+      "weather",
       "status",
       "boss",
       "defenseTypes",
@@ -1108,6 +1234,8 @@ function outputTsv(
       "chargedEffectiveness",
       "quickAuraMultiplier",
       "chargedAuraMultiplier",
+      "quickWeatherMultiplier",
+      "chargedWeatherMultiplier",
       "unboostedMegaDps",
       "boostedMegaDps",
       "unboostedNonMegaDps",
@@ -1117,6 +1245,8 @@ function outputTsv(
       "backgroundCharged",
       "backgroundQuickAuraMultiplier",
       "backgroundChargedAuraMultiplier",
+      "backgroundQuickWeatherMultiplier",
+      "backgroundChargedWeatherMultiplier",
       "backgroundDps",
       "megaMarginPercent",
       "outrightMegaLeader",
@@ -1131,7 +1261,9 @@ function outputTsv(
       console.log(
         [
           name,
-          tierAudit.assignments.get(name)?.tier ?? "-",
+          tierAudit?.assignments.get(name)?.tier ?? "-",
+          tierAudit?.assignments.get(name)?.conditionalWeathers.join(",") ?? "-",
+          options.weather,
           status(matchup),
           matchup.boss.label,
           matchup.boss.defenseTypes.join("/"),
@@ -1143,6 +1275,8 @@ function outputTsv(
           matchup.chargedEffectiveness,
           matchup.quickAuraMultiplier,
           matchup.chargedAuraMultiplier,
+          matchup.quickWeatherMultiplier,
+          matchup.chargedWeatherMultiplier,
           candidate.unboostedDps,
           candidate.boostedDps,
           matchup.unboostedLeader.dps,
@@ -1152,6 +1286,8 @@ function outputTsv(
           moveName(masterfile, background.row.charged),
           background.quickAuraMultiplier,
           background.chargedAuraMultiplier,
+          background.quickWeatherMultiplier,
+          background.chargedWeatherMultiplier,
           background.row.dps,
           (candidate.boostedDps / background.row.dps - 1) * 100,
           matchup.outrightLeader.name,
@@ -1163,13 +1299,163 @@ function outputTsv(
   }
 }
 
+function outputSummary(
+  options: CliOptions,
+  audit: Map<string, AuditMatchup[]>
+): void {
+  const lines = [
+    "weather\tcandidate\tstatus\tbossCount\tbosses\tminMarginPercent\tmaxMarginPercent"
+  ];
+  for (const name of selectedNames(audit, options.pokemon)) {
+    const byStatus = new Map<string, AuditMatchup[]>();
+    for (const matchup of sortedMatchups(audit.get(name) ?? [])) {
+      const label = status(matchup);
+      byStatus.set(label, [...(byStatus.get(label) ?? []), matchup]);
+    }
+    for (const [label, matchups] of byStatus) {
+      const margins = matchups.map(
+        (matchup) =>
+          (matchup.candidate.boostedDps / matchup.backgroundLeader.row.dps - 1) * 100
+      );
+      lines.push(
+        [
+          options.weather,
+          name,
+          label,
+          matchups.length,
+          matchups.map((matchup) => matchup.boss.label).join("; "),
+          Math.min(...margins),
+          Math.max(...margins)
+        ].join("\t")
+      );
+    }
+  }
+  const output = `${lines.join("\n")}\n`;
+  if (options.summaryOutputPath) fs.writeFileSync(options.summaryOutputPath, output);
+  else process.stdout.write(output);
+}
+
+function runWeatherTierAudit(
+  options: CliOptions,
+  weather: PvedpsWeather,
+  workerScript: string,
+  summaryOutputPath: string
+): Promise<MegaWeatherTierAudit> {
+  const args = [
+    workerScript,
+    "--format",
+    "summary",
+    "--weather",
+    weather,
+    "--masterfile",
+    options.masterfilePath,
+    "--summary-output",
+    summaryOutputPath
+  ];
+  if (!options.projections) args.push("--no-projections");
+  return new Promise((resolve, reject) => {
+    execFile(
+      process.execPath,
+      args,
+      { encoding: "utf8", maxBuffer: 10 * 1024 * 1024 },
+      (error, _stdout, stderr) => {
+        if (error) {
+          reject(
+            new Error(
+              `${weatherOption(weather).label} audit failed: ${stderr.trim() || error.message}`,
+              { cause: error }
+            )
+          );
+          return;
+        }
+        try {
+          resolve(
+            parseMegaWeatherTierSummary(
+              weather,
+              fs.readFileSync(summaryOutputPath, "utf8")
+            )
+          );
+        } catch (parseError) {
+          reject(
+            new Error(
+              `${weatherOption(weather).label} audit returned invalid output${stderr.trim() ? `: ${stderr.trim()}` : ""}`,
+              { cause: parseError }
+            )
+          );
+        }
+      }
+    );
+  });
+}
+
+async function buildWeatherWorker(): Promise<{ directory: string; script: string }> {
+  const directory = await fs.promises.mkdtemp(path.join(tmpdir(), "rotomata-megatier-"));
+  const script = path.join(directory, "weather-worker.mjs");
+  try {
+    const { build } = await import("esbuild");
+    await build({
+      entryPoints: [SCRIPT_PATH],
+      outfile: script,
+      bundle: true,
+      platform: "node",
+      format: "esm",
+      external: ["esbuild"],
+      logLevel: "silent"
+    });
+    return { directory, script };
+  } catch (error) {
+    await fs.promises.rm(directory, { recursive: true, force: true });
+    throw error;
+  }
+}
+
+async function buildConditionalWeatherAudits(
+  options: CliOptions
+): Promise<Map<PvedpsWeather, MegaWeatherTierAudit>> {
+  const worker = await buildWeatherWorker();
+  try {
+    const unordered = new Map<PvedpsWeather, MegaWeatherTierAudit>();
+    let nextWeather = 0;
+    const workerCount = Math.min(
+      MAX_WEATHER_WORKERS,
+      availableParallelism(),
+      CONDITIONAL_WEATHERS.length
+    );
+    console.error(`Auditing conditional tiers with ${workerCount} parallel workers`);
+    await Promise.all(
+      Array.from({ length: workerCount }, async () => {
+        while (nextWeather < CONDITIONAL_WEATHERS.length) {
+          const index = nextWeather;
+          nextWeather += 1;
+          const weather = CONDITIONAL_WEATHERS[index];
+          console.error(
+            `Auditing conditional tier weather ${index + 1}/${CONDITIONAL_WEATHERS.length}: ${weatherOption(weather).label}`
+          );
+          unordered.set(
+            weather,
+            await runWeatherTierAudit(
+              options,
+              weather,
+              worker.script,
+              path.join(worker.directory, `${weather}.tsv`)
+            )
+          );
+        }
+      })
+    );
+    return new Map(CONDITIONAL_WEATHERS.map((weather) => [weather, unordered.get(weather)!]));
+  } finally {
+    await fs.promises.rm(worker.directory, { recursive: true, force: true });
+  }
+}
+
 function outputJson(
   masterfile: Masterfile,
   options: CliOptions,
   projections: ProjectionResult[],
   bosses: BossProfile[],
   audit: Map<string, AuditMatchup[]>,
-  tierAudit: MechanicalTierAudit
+  tierAudit?: MechanicalTierAudit
 ): void {
   const pokemon = Object.fromEntries(
     selectedNames(audit, options.pokemon).map((name) => [
@@ -1178,7 +1464,7 @@ function outputJson(
         const candidate = matchup.candidate;
         const background = matchup.backgroundLeader;
         return {
-          tier: tierAudit.assignments.get(name)?.tier ?? null,
+          tier: tierAudit?.assignments.get(name)?.tier ?? null,
           status: status(matchup),
           boss: matchup.boss,
           moves: {
@@ -1193,6 +1479,11 @@ function outputJson(
             types: candidate.auraTypes,
             quickMultiplier: matchup.quickAuraMultiplier,
             chargedMultiplier: matchup.chargedAuraMultiplier
+          },
+          weather: {
+            condition: options.weather,
+            quickMultiplier: matchup.quickWeatherMultiplier,
+            chargedMultiplier: matchup.chargedWeatherMultiplier
           },
           dps: {
             unboostedMega: candidate.unboostedDps,
@@ -1211,7 +1502,9 @@ function outputJson(
               charged: moveName(masterfile, background.row.charged)
             },
             quickMultiplier: background.quickAuraMultiplier,
-            chargedMultiplier: background.chargedAuraMultiplier
+            chargedMultiplier: background.chargedAuraMultiplier,
+            quickWeatherMultiplier: background.quickWeatherMultiplier,
+            chargedWeatherMultiplier: background.chargedWeatherMultiplier
           },
           leaders: {
             outrightMega: matchup.outrightLeader.name,
@@ -1233,6 +1526,12 @@ function outputJson(
           comparison:
             "same-mega-mutual-aura-vs-best-background-primal-or-rayquaza-repeatable-non-mega",
           auraMultipliers: { matchingMoveType: 1.3, otherMoveType: 1.1 },
+          weather: {
+            value: options.weather,
+            label: weatherOption(options.weather).label,
+            boostedTypes: weatherOption(options.weather).typeNames,
+            matchingMoveTypeMultiplier: 1.2
+          },
           bossCount: bosses.length,
           ordinaryTargetRule:
             "all-game-master-legendary-mythical-ultra-beast-base-profiles-plus-distinct-typed-forms",
@@ -1244,23 +1543,30 @@ function outputJson(
           sources: SOURCE_URLS,
           projections
         },
-        tiers: Object.fromEntries(
-          listMegaIdentities(masterfile).map((identity) => [
-            identity.name,
-            {
-              ...tierAudit.assignments.get(identity.name),
-              auraTypes: identity.auraTypes
+        ...(tierAudit
+          ? {
+              tiers: Object.fromEntries(
+                listMegaIdentities(masterfile).map((identity) => [
+                  identity.name,
+                  {
+                    ...tierAudit.assignments.get(identity.name),
+                    auraTypes: identity.auraTypes
+                  }
+                ])
+              ),
+              typeLeaders: {
+                party2: Object.fromEntries(tierAudit.party2TypeLeaders),
+                gym: Object.fromEntries(tierAudit.gymTypeLeaders)
+              },
+              typeComparisons: {
+                party2: tierAudit.party2TypeComparisons,
+                gym: tierAudit.gymTypeComparisons
+              }
             }
-          ])
-        ),
-        typeLeaders: {
-          party2: Object.fromEntries(tierAudit.party2TypeLeaders),
-          gym: Object.fromEntries(tierAudit.gymTypeLeaders)
-        },
-        typeComparisons: {
-          party2: tierAudit.party2TypeComparisons,
-          gym: tierAudit.gymTypeComparisons
-        },
+          : {
+              tierPolicy:
+                "Single-weather output does not calculate the complete baseline-plus-weather tier assignment; run with --weather none"
+            }),
         pokemon
       },
       null,
@@ -1294,12 +1600,19 @@ if (options.listBosses) {
     );
   }
 } else {
-  const audit = buildAudit(masterfile, bosses);
-  const tierAudit = buildMechanicalTiers(masterfile, audit);
+  const audit = buildAudit(masterfile, bosses, options.weather);
+  const shouldBuildTierAudit = options.weather === "none" && options.format !== "summary";
+  const weatherAudits = shouldBuildTierAudit
+    ? await buildConditionalWeatherAudits(options)
+    : new Map<PvedpsWeather, MegaWeatherTierAudit>();
+  const tierAudit = shouldBuildTierAudit
+    ? buildMechanicalTiers(masterfile, audit, weatherAudits)
+    : undefined;
   if (options.format === "json") {
     outputJson(masterfile, options, projections, bosses, audit, tierAudit);
   }
   if (options.format === "tsv") outputTsv(masterfile, options, audit, tierAudit);
+  if (options.format === "summary") outputSummary(options, audit);
   if (options.format === "markdown") {
     outputMarkdown(masterfile, options, projections, bosses, audit, tierAudit);
   }

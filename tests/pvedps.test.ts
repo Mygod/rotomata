@@ -12,6 +12,8 @@ import {
   calculateMegaLevel4MovePower,
   formatPvedpsRow,
   isPvedpsMode,
+  isPvedpsWeather,
+  PVEDPS_WEATHER_OPTIONS,
   PvedpsMasterfileError
 } from "../src/lib/pogo/pvedps";
 
@@ -102,6 +104,86 @@ describe("pvedps", () => {
     expect(buildPvedpsRows(masterfile)).toEqual(buildPvedpsRows(masterfile, { mode: "party2" }));
     expect(isPvedpsMode("party4")).toBe(true);
     expect(isPvedpsMode("party5")).toBe(false);
+  });
+
+  it("defines every in-game weather and recognizes only supported URL values", () => {
+    expect(PVEDPS_WEATHER_OPTIONS).toEqual([
+      { value: "none", label: "No weather", typeIds: [], typeNames: [] },
+      {
+        value: "clear",
+        label: "Clear / Sunny",
+        typeIds: [5, 10, 12],
+        typeNames: ["Ground", "Fire", "Grass"]
+      },
+      {
+        value: "rain",
+        label: "Rain",
+        typeIds: [7, 11, 13],
+        typeNames: ["Bug", "Water", "Electric"]
+      },
+      {
+        value: "partly-cloudy",
+        label: "Partly Cloudy",
+        typeIds: [1, 6],
+        typeNames: ["Normal", "Rock"]
+      },
+      {
+        value: "cloudy",
+        label: "Cloudy / Overcast",
+        typeIds: [2, 4, 18],
+        typeNames: ["Fighting", "Poison", "Fairy"]
+      },
+      {
+        value: "windy",
+        label: "Windy",
+        typeIds: [3, 14, 16],
+        typeNames: ["Flying", "Psychic", "Dragon"]
+      },
+      {
+        value: "snow",
+        label: "Snow",
+        typeIds: [9, 15],
+        typeNames: ["Steel", "Ice"]
+      },
+      {
+        value: "fog",
+        label: "Fog",
+        typeIds: [8, 17],
+        typeNames: ["Ghost", "Dark"]
+      }
+    ]);
+    expect(isPvedpsWeather("partly-cloudy")).toBe(true);
+    expect(isPvedpsWeather("sunny")).toBe(false);
+  });
+
+  it("applies weather per move type and composes it with Mega Level 4 and teammate boosts", () => {
+    const masterfile = createMasterfile();
+    const find = (weather: "none" | "clear" | "windy", megaTeammateBoost = false) =>
+      buildPvedpsRows(masterfile, {
+        mode: "party2",
+        weather,
+        megaTeammateBoost
+      }).find((row) => row.pokemon === "Dragonite" && row.form === "Mega")!;
+
+    expect(find("clear").dps).toBeCloseTo(find("none").dps);
+    expect(find("windy").dps / find("none").dps).toBeCloseTo(1.2);
+    expect(find("windy", true).dps / find("none", true).dps).toBeCloseTo(1.2);
+    expect(find("windy", true).charged).toBe(515);
+  });
+
+  it("reselects the best moveset after applying weather", () => {
+    const masterfile = createMasterfile();
+    masterfile.moves["102"] = move(102, "Leaf Flick", 12, 8, 500, 8, true);
+    masterfile.pokemon["149"].quickMoves = [100, 102];
+    const unboosted = buildPvedpsRows(masterfile, { mode: "raid" }).find(
+      (row) => row.pokemon === "Dragonite" && row.form === ""
+    );
+    const windy = buildPvedpsRows(masterfile, { mode: "raid", weather: "windy" }).find(
+      (row) => row.pokemon === "Dragonite" && row.form === ""
+    );
+
+    expect(unboosted?.quick).toBe(102);
+    expect(windy?.quick).toBe(100);
   });
 
   it("models every Mega and Primal branch at level 52 without treating Gmax as Mega", () => {
@@ -217,8 +299,14 @@ describe("pvedps", () => {
       mode: "party2",
       teammateAuraTypeIds: [16]
     }).find((row) => row.pokemon === "Lugia" && row.alignment === "Apex Shadow");
+    const windy = buildPvedpsRows(masterfile, {
+      mode: "party2",
+      teammateAuraTypeIds: [16],
+      weather: "windy"
+    }).find((row) => row.pokemon === "Lugia" && row.alignment === "Apex Shadow");
 
     expect(boosted!.dps / unboosted!.dps).toBeCloseTo(1.3);
+    expect(windy!.dps / boosted!.dps).toBeCloseTo(1.2);
   });
 
   it("rejects combining two incompatible teammate-aura strategies", () => {
@@ -240,6 +328,71 @@ describe("pvedps", () => {
     expect(rows.length).toBeGreaterThan(0);
     expect(rows.every((row) => masterfile.moves[String(row.charged)]?.type === 12)).toBe(true);
     expect(rows.some((row) => row.pokemon === "Dragonite")).toBe(false);
+  });
+
+  it("models a single-weakness type benchmark without mixing in an explicit defender", () => {
+    const masterfile = createMasterfile();
+    const neutral = buildPvedpsRows(masterfile, {
+      mode: "raid",
+      attackTypeId: 16
+    }).find((row) => row.pokemon === "Dragonite" && row.form === "")!;
+    const benchmark = buildPvedpsRows(masterfile, {
+      mode: "raid",
+      attackTypeId: 16,
+      benchmarkAttackTypeId: 16
+    }).find((row) => row.pokemon === "Dragonite" && row.form === "")!;
+
+    expect(benchmark.dps / neutral.dps).toBeCloseTo(1.6);
+    expect(() =>
+      buildPvedpsRows(masterfile, {
+        attackTypeId: 16,
+        benchmarkAttackTypeId: 16,
+        type1: "Dragon"
+      })
+    ).toThrow("cannot be combined with explicit defender types");
+  });
+
+  it("does not mistake neutral Psychic fast-move damage for Fairy leadership", () => {
+    const masterfile = createMasterfile();
+    masterfile.types["14"] = type(14, "Psychic");
+    masterfile.types["18"] = type(18, "Fairy");
+    masterfile.moves["104"] = move(104, "Confusion", 14, 19, 1500, 14, true);
+    masterfile.moves["105"] = move(105, "Charm", 18, 20, 1500, 11, true);
+    masterfile.moves["206"] = move(206, "Dazzling Gleam", 18, 100, 3500, -50, false);
+
+    const alakazam = pokemon("Alakazam", 65, [104], [206]);
+    alakazam.types = { "14": { typeId: 14, typeName: "Psychic" } };
+    alakazam.tempEvolutions = {
+      "1": { tempEvoId: 1, stats: { attack: 367, defense: 207, stamina: 146 } }
+    };
+    masterfile.pokemon["65"] = alakazam;
+
+    const gardevoir = pokemon("Gardevoir", 282, [104, 105], [206]);
+    gardevoir.types = {
+      "14": { typeId: 14, typeName: "Psychic" },
+      "18": { typeId: 18, typeName: "Fairy" }
+    };
+    gardevoir.tempEvolutions = {
+      "1": { tempEvoId: 1, stats: { attack: 326, defense: 229, stamina: 169 } }
+    };
+    masterfile.pokemon["282"] = gardevoir;
+
+    const findMega = (rows: ReturnType<typeof buildPvedpsRows>, name: string) =>
+      rows.find((row) => row.pokemon === name && row.form === "Mega")!;
+    const neutralRows = buildPvedpsRows(masterfile, { mode: "gym", attackTypeId: 18 });
+    const benchmarkRows = buildPvedpsRows(masterfile, {
+      mode: "gym",
+      attackTypeId: 18,
+      benchmarkAttackTypeId: 18
+    });
+
+    expect(findMega(neutralRows, "Alakazam").dps).toBeGreaterThan(
+      findMega(neutralRows, "Gardevoir").dps
+    );
+    expect(findMega(benchmarkRows, "Gardevoir").dps).toBeGreaterThan(
+      findMega(benchmarkRows, "Alakazam").dps
+    );
+    expect(findMega(benchmarkRows, "Gardevoir").quick).toBe(105);
   });
 
   it("uses Primal weather and Mega Rayquaza coverage instead of only their own types", () => {

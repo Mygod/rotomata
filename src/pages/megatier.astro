@@ -10,6 +10,7 @@ interface TierEntry {
     outrightAligned?: string;
     outright?: string;
     candyAligned?: string;
+    conditional?: string;
   };
 }
 
@@ -28,6 +29,22 @@ interface PlusMove {
   party2Gain: string;
 }
 
+interface WeatherFinding {
+  weather: string;
+  boostedTypes: string;
+  evidence: string;
+}
+
+interface SteelWeatherRow {
+  weather: string;
+  mewtwoX: string;
+  lucarioZ: string;
+  excadrill: string;
+  heatran: string;
+  background: string;
+  result: string;
+}
+
 const officialMegaUpdate = "https://pokemongo.com/news/more-mega-updates-2026";
 const officialMegaSquads = "https://pokemongo.com/en/news/mega-squads-2026";
 const officialRaidPool = "https://pokemongo.com/news/road-of-legends-2026?hl=en";
@@ -37,6 +54,10 @@ const officialMegaEncounter =
   "https://niantic.helpshift.com/hc/en/6-pokemon-go/faq/3336-i-defeated-a-mega-raid-boss-but-they-turned-back-into-their-regular-form-for-the-encounter/";
 const officialMegaBoost =
   "https://niantic.helpshift.com/hc/en/6-pokemon-go/faq/3334-using-a-mega-evolved-pokemon/";
+const officialWeatherBoost =
+  "https://niantic.helpshift.com/hc/en/6-pokemon-go/faq/53-what-are-weather-boosts/?f=weather-boosts&l=en";
+const gameMasterSource =
+  "https://raw.githubusercontent.com/alexelgt/game_masters/refs/heads/master/GAME_MASTER.json";
 const originalTierList =
   "https://tiermaker.com/list/pokemon/pokemon-mega-evolutions-18840649/6197835";
 
@@ -54,6 +75,93 @@ const plusMoves: PlusMove[] = [
     basePower: 150,
     effectivePower: 195,
     party2Gain: "+55.9%",
+  },
+];
+
+const weatherFindings: WeatherFinding[] = [
+  {
+    weather: "Clear / Sunny",
+    boostedTypes: "Ground, Fire, Grass",
+    evidence:
+      "Three entries receive conditional tiers. Mega Meganium reaches B through a catch-aligned Tapu Fini lead (+0.5%). Mega Chesnaught reaches B through Keldeo and Rapid Strike Urshifu (+17.9%); it is also outright against Groudon, Arceus (Ground), and Silvally (Ground) (+29.7%). Mega Delphox reaches A- by becoming outright and catch-aligned for Ice Rider Calyrex (+13.4%).",
+  },
+  {
+    weather: "Rain",
+    boostedTypes: "Bug, Water, Electric",
+    evidence:
+      "Mega Raichu Y reaches A-: Zapdos and both Thundurus results become outright and catch-aligned (+28.7%). Without Rain, those results are catch-aligned only, which would place it in B+.",
+  },
+  {
+    weather: "Partly Cloudy",
+    boostedTypes: "Normal, Rock",
+    evidence:
+      "Mega Glimmora reaches C+ by becoming the outright leader for Articuno, Moltres, and Ho-Oh (+12.1% on each profile).",
+  },
+  {
+    weather: "Cloudy / Overcast",
+    boostedTypes: "Fighting, Poison, Fairy",
+    evidence:
+      "Mega Lucario Z reaches B through catch-aligned leads for Registeel, both Dialga formes, Arceus (Steel), Silvally (Steel), Stakataka, Meltan, and Melmetal (+10.0%); Mega Mewtwo X remains outright.",
+  },
+  {
+    weather: "Windy",
+    boostedTypes: "Flying, Dragon, Psychic",
+    evidence:
+      "Mega Mewtwo Y reaches A- by becoming both outright and catch-aligned for Mega Mewtwo X and Munkidori (+7.9% to +14.5%).",
+  },
+  {
+    weather: "Snow",
+    boostedTypes: "Steel, Ice",
+    evidence:
+      "No non-S candidate reaches a stronger boss-based tier rule. Mega Baxcalibur's winning boss set expands to both Landorus formes and Sky Shaymin (+9.5%), but it already meets A without weather.",
+  },
+  {
+    weather: "Fog",
+    boostedTypes: "Ghost, Dark",
+    evidence:
+      "Mega Houndoom reaches C+ through outright leads for Jirachi, Hoopa, Solgaleo, Lunala, both fused Necrozma formes, Shadow Rider Calyrex, and Iron Crown; the margin is only +0.6%.",
+  },
+];
+
+const steelWeatherRows: SteelWeatherRow[] = [
+  {
+    weather: "No weather",
+    mewtwoX: "14,827",
+    lucarioZ: "11,508",
+    excadrill: "10,163",
+    heatran: "9,011",
+    background: "12,556",
+    result: "Mewtwo X is outright; none of the three beats the background strategy.",
+  },
+  {
+    weather: "Clear / Sunny",
+    mewtwoX: "14,827",
+    lucarioZ: "11,508",
+    excadrill: "12,196",
+    heatran: "10,813",
+    background: "15,067",
+    result:
+      "Excadrill wins the three-way race, but Shadow Therian Landorus receives the same Ground boost and remains faster.",
+  },
+  {
+    weather: "Cloudy / Overcast",
+    mewtwoX: "17,589",
+    lucarioZ: "13,810",
+    excadrill: "10,163",
+    heatran: "9,011",
+    background: "12,556",
+    result:
+      "Lucario Z clears the background by 10.0% and is catch-aligned; Mewtwo X is still outright.",
+  },
+  {
+    weather: "Snow",
+    mewtwoX: "14,827",
+    lucarioZ: "11,508",
+    excadrill: "10,163",
+    heatran: "9,011",
+    background: "12,556",
+    result:
+      "No selected moveset uses Steel damage, so Snow changes none of these attacker-side DPS values.",
   },
 ];
 
@@ -166,49 +274,129 @@ const tiers: Tier[] = [
     ],
   },
   {
-    slug: "b",
-    label: "B",
+    slug: "a-minus",
+    label: "A-",
     principle:
-      "No combined outright-and-aligned result, but at least one catch-aligned duo lead that still beats the best background-booster strategy.",
+      "No no-weather combined result, but at least one weather condition makes the candidate simultaneously outright and catch-aligned.",
     entries: [
       {
         name: "Mega Raichu Y",
-        change: "F → B",
+        change: "F → A-",
         rationale:
-          "Thunder Shock and Zap Cannon+ both receive 1.3×. Raichu Y is the catch-aligned leader for the three Electric/Flying profiles by 13.4%, and has 23 additional outright wins by 15.4% to 28.7%, but no target where those two labels coincide.",
+          "Without weather, Raichu Y has three catch-aligned leads and 23 separate outright wins, but no combined profile. Rain makes Zapdos and both Thundurus formes simultaneously outright and catch-aligned by 28.7%, which mechanically places it in A-.",
         evidence: {
           candyAligned: "Zapdos; Incarnate Thundurus; and Therian Thundurus.",
           outright:
             "Articuno and Galarian Articuno; Moltres and Galarian Moltres; Suicune; Lugia; Ho-Oh; Kyogre and Primal Kyogre; Phione; Manaphy; Arceus (Flying and Water); Incarnate and Therian Tornadus; Yveltal; Volcanion; Silvally (Flying and Water); Tapu Fini; Celesteela; and Incarnate and Therian Enamorus.",
+          conditional:
+            "Rain — Zapdos; Incarnate Thundurus; and Therian Thundurus become outright + catch-aligned (+28.7%).",
         },
       },
       {
-        name: "Mega Lopunny",
-        change: "D+ → B",
+        name: "Mega Mewtwo Y",
+        change: "C → A-",
         rationale:
-          "Low Kick and Focus Blast both receive 1.3×. Lopunny is the fastest catch-aligned strategy for the five Normal encounters, beating Pheromosa supported by Primal Kyogre by 7.3%, but Mewtwo X remains the outright Mega leader.",
+          "Without weather, Future Sight+ gives Mewtwo Y 25 outright wins but no catch-aligned lead. Windy makes it both outright and catch-aligned for Mega Mewtwo X and Munkidori by 7.9% to 14.5%, so the weather-conditional combined rule places it in A-.",
+        evidence: {
+          outright:
+            "Zapdos and Galarian Zapdos; Arceus (Fighting and Poison); Terrakion; Virizion; Incarnate and Therian Thundurus; Keldeo; Pirouette Meloetta; Silvally (Fighting and Poison); Buzzwole; Pheromosa; Marshadow; Poipole; Naganadel; Hero Zamazenta; Eternatus; Kubfu; Rapid Strike Urshifu; Koraidon; Okidogi; Fezandipiti; and Pecharunt.",
+          conditional:
+            "Windy — Mega Mewtwo X and Munkidori become outright + catch-aligned (+7.9% to +14.5%).",
+        },
+      },
+      {
+        name: "Mega Delphox",
+        change: "C- → A-",
+        rationale:
+          "Without weather, Delphox is catch-aligned for Ice Rider Calyrex and outright on eight separate Bug profiles. Clear/Sunny makes the Ice Rider Calyrex result outright as well as catch-aligned by 13.4%, satisfying A- but not the no-weather A rule.",
+        evidence: {
+          candyAligned: "Ice Rider Calyrex.",
+          outright:
+            "Arceus (Bug); Genesect with no Drive, Burn Drive, Chill Drive, Douse Drive, or Shock Drive; Silvally (Bug); and Kartana.",
+          conditional:
+            "Clear / Sunny — Ice Rider Calyrex becomes outright + catch-aligned (+13.4%).",
+        },
+      },
+    ],
+  },
+  {
+    slug: "b-plus",
+    label: "B+",
+    principle:
+      "At least one no-weather catch-aligned duo lead, but no combined outright-and-aligned result in baseline or weather.",
+    entries: [
+      {
+        name: "Mega Lopunny",
+        change: "D+ → B+",
+        rationale:
+          "Low Kick and Focus Blast both receive 1.3×. Lopunny is the fastest catch-aligned strategy for all five modeled Normal encounters, beating Pheromosa supported by Primal Kyogre by 7.3%; Mewtwo X remains outright, and no weather creates a combined result.",
         evidence: {
           candyAligned: "Regigigas; Arceus (Normal); Type: Null; Silvally (Normal); and Terapagos.",
         },
       },
       {
-        name: "Mega Delphox",
-        change: "C- → B",
+        name: "Mega Greninja",
+        change: "C- → B+",
         rationale:
-          "Fire Spin and Mystical Fire+ both receive 1.3×. Delphox is the catch-aligned leader against Ice Rider Calyrex by 3.6%, and the outright leader on eight Bug or Bug/Steel profiles by 11.1% to 19.0%, without a profile combining both labels.",
+          "Water Shuriken and Surf+ both receive 1.3×. Greninja is the no-weather catch-aligned duo leader against Ting-Lu, beating Bug Bite/Focus Blast Pheromosa supported by Primal Kyogre by 26.7%; Starmie remains outright, and no weather creates a combined result.",
         evidence: {
-          candyAligned: "Ice Rider Calyrex.",
-          outright:
-            "Arceus (Bug); Genesect with no Drive, Burn Drive, Chill Drive, Douse Drive, or Shock Drive; Silvally (Bug); and Kartana.",
+          candyAligned: "Ting-Lu.",
+        },
+      },
+    ],
+  },
+  {
+    slug: "b",
+    label: "B",
+    principle:
+      "No no-weather catch-aligned result, but at least one weather condition creates a catch-aligned duo lead without a combined outright result.",
+    entries: [
+      {
+        name: "Mega Meganium",
+        change: "C → B",
+        rationale:
+          "Meganium has no qualifying no-weather boss result. Under Clear/Sunny, its Grass/Fairy package becomes the catch-aligned leader for Tapu Fini and beats the best background strategy by 0.5%; it is not outright, so the conditional catch rule places it in B.",
+        evidence: {
+          conditional: "Clear / Sunny — catch-aligned for Tapu Fini (+0.5%).",
         },
       },
       {
-        name: "Mega Greninja",
-        change: "C- → B",
+        name: "Mega Lucario Z",
+        change: "A → B",
         rationale:
-          "Water Shuriken and Surf+ both receive 1.3×. Greninja is the catch-aligned duo leader against Ting-Lu, where it beats Bug Bite/Focus Blast Pheromosa supported by Primal Kyogre by 26.7%; Starmie remains the outright Mega leader.",
+          "Lucario Z has no qualifying no-weather boss result. Cloudy/Overcast makes it the catch-aligned leader on eight Steel encounters by 10.0%, while Mewtwo X remains the outright strategy; that is exactly the conditional B rule.",
         evidence: {
-          candyAligned: "Ting-Lu.",
+          conditional:
+            "Cloudy / Overcast — catch-aligned for Registeel; both Dialga formes; Arceus (Steel); Silvally (Steel); Stakataka; Meltan; and Melmetal (+10.0%).",
+        },
+      },
+      {
+        name: "Mega Chesnaught",
+        change: "D+ → B",
+        rationale:
+          "Chesnaught has no qualifying no-weather boss result. Clear/Sunny makes it catch-aligned for Keldeo and Rapid Strike Urshifu by 17.9%; it also becomes outright on the modeled Ground profiles by 29.7%, but those are separate targets, so B outranks conditional C+.",
+        evidence: {
+          conditional:
+            "Clear / Sunny — catch-aligned for Keldeo and Rapid Strike Urshifu (+17.9%); outright for Groudon, Arceus (Ground), and Silvally (Ground) (+29.7%).",
+        },
+      },
+    ],
+  },
+  {
+    slug: "b-minus",
+    label: "B-",
+    principle:
+      "At least one no-weather outright win over the best background strategy, but no catch-aligned lead in baseline or weather.",
+    entries: [
+      {
+        name: "Mega Beedrill",
+        change: "C- → B-",
+        projection: "Announced move",
+        rationale:
+          "Projected Fell Stinger+ gives Beedrill 34 no-weather outright wins by 12.8% to 71.2% over the best background-supported non-Mega strategy. None is catch-aligned, and no weather creates a catch-aligned result, so it lands in B-.",
+        evidence: {
+          outright:
+            "Mega Mewtwo Y; Mewtwo; Mew; Celebi; Latias and Mega Latias; Latios and Mega Latios; all four Deoxys formes; Uxie; Mesprit; Azelf; Cresselia; Shaymin; Arceus (Grass and Psychic); Meloetta; Hoopa Unbound; Silvally (Grass and Psychic); Cosmog; Cosmoem; Necrozma and Ultra Necrozma; Zarude; Calyrex and Ice Rider Calyrex; Wo-Chien; Iron Leaves; Ogerpon; and Iron Boulder.",
         },
       },
     ],
@@ -217,27 +405,27 @@ const tiers: Tier[] = [
     slug: "c-plus",
     label: "C+",
     principle:
-      "At least one outright win over the best background-booster strategy, but no qualifying catch-aligned lead.",
+      "No no-weather outright result, but at least one weather condition creates an outright win without any catch-aligned lead.",
     entries: [
       {
-        name: "Mega Beedrill",
-        change: "C- → C+",
+        name: "Mega Houndoom",
+        change: "D+ → C+",
         projection: "Announced move",
         rationale:
-          "Projected Fell Stinger+ gives Beedrill 34 outright wins by 12.8% to 71.2% over the best backline-supported non-Mega strategy. Bug Bite and Fell Stinger+ both receive 1.3×, but none of those winning profiles also makes Beedrill the catch-aligned leader.",
+          "With projected Dark Pulse+, Houndoom is the no-weather Party-of-2 Dark type leader but has no qualifying boss win. Fog creates eight outright boss leads by 0.6%, none catch-aligned, so the conditional outright rule places it in C+.",
         evidence: {
-          outright:
-            "Mega Mewtwo Y; Mewtwo; Mew; Celebi; Latias and Mega Latias; Latios and Mega Latios; all four Deoxys formes; Uxie; Mesprit; Azelf; Cresselia; Shaymin; Arceus (Grass and Psychic); Meloetta; Hoopa Unbound; Silvally (Grass and Psychic); Cosmog; Cosmoem; Necrozma and Ultra Necrozma; Zarude; Calyrex and Ice Rider Calyrex; Wo-Chien; Iron Leaves; Ogerpon; and Iron Boulder.",
+          conditional:
+            "Fog — outright for Jirachi; Hoopa; Solgaleo; Lunala; both fused Necrozma formes; Shadow Rider Calyrex; and Iron Crown (+0.6%).",
         },
       },
       {
-        name: "Mega Mewtwo Y",
+        name: "Mega Glimmora",
         change: "C → C+",
         rationale:
-          "Future Sight+ now produces 25 outright wins by 15.1% to 71.6% over the best background strategy. Those targets are Fighting, Poison, or mixed profiles rather than Psychic catches, so the fully mechanical rule places Mewtwo Y in C+ rather than promoting it for raw Psychic rank alone.",
+          "Glimmora is the no-weather Party-of-2 Rock type leader but has no qualifying boss win. Partly Cloudy makes it outright for Articuno, Moltres, and Ho-Oh by 12.1%; none is catch-aligned, so it meets conditional C+.",
         evidence: {
-          outright:
-            "Zapdos and Galarian Zapdos; Arceus (Fighting and Poison); Terrakion; Virizion; Incarnate and Therian Thundurus; Keldeo; Pirouette Meloetta; Silvally (Fighting and Poison); Buzzwole; Pheromosa; Marshadow; Poipole; Naganadel; Hero Zamazenta; Eternatus; Kubfu; Rapid Strike Urshifu; Koraidon; Okidogi; Fezandipiti; and Pecharunt.",
+          conditional:
+            "Partly Cloudy — outright for Articuno, Moltres, and Ho-Oh (+12.1%).",
         },
       },
     ],
@@ -246,31 +434,13 @@ const tiers: Tier[] = [
     slug: "c",
     label: "C",
     principle:
-      "No qualifying boss win, but the candidate is the fastest full-pool Party-of-2 strategy for at least one neutral Charged Attack type covered by its own aura.",
+      "No qualifying boss result in baseline or weather, but the candidate is the fastest full-pool Party-of-2 strategy against a synthetic target weak only to a Charged Attack type covered by its own aura.",
     entries: [
       {
-        name: "Mega Houndoom",
-        change: "D+ → C",
-        projection: "Announced move",
+        name: "Mega Magearna",
+        change: "D → C",
         rationale:
-          "With projected Dark Pulse+, Houndoom is the full-pool Party-of-2 Dark leader, 29.0% ahead of runner-up Mega Absol Z.",
-      },
-      {
-        name: "Mega Chesnaught",
-        change: "D+ → C",
-        rationale:
-          "Chesnaught is the full-pool Party-of-2 Grass leader, 11.3% ahead of active Primal Groudon.",
-      },
-      {
-        name: "Mega Diancie",
-        change: "D+ → C",
-        rationale:
-          "Diancie is the full-pool Party-of-2 Fairy leader, 0.8% ahead of Mega Magearna.",
-      },
-      {
-        name: "Mega Glimmora",
-        rationale:
-          "Glimmora is the full-pool Party-of-2 Rock leader, 7.2% ahead of Shadow Gigalith with the best backline boost.",
+          "Magearna is the full-pool Party-of-2 Fairy leader, 1.4% ahead of runner-up Mega Diancie, but it does not gain a qualifying boss result in any audited weather.",
       },
     ],
   },
@@ -284,29 +454,29 @@ const tiers: Tier[] = [
         name: "Mega Gengar",
         change: "A → C-",
         rationale:
-          "Gengar is the full-pool Gym Poison leader, 9.0% ahead of Shadow Darkrai. It does not lead Ghost or win a modeled raid-boss matchup.",
+          "Gengar is the full-pool Gym Ghost leader, 7.6% ahead of runner-up Mega Chandelure. It does not win a modeled raid-boss matchup.",
       },
       {
         name: "Mega Sceptile",
         rationale:
-          "Sceptile is the full-pool Gym Grass leader, 13.9% ahead of Mega Meganium.",
+          "Sceptile is the full-pool Gym Grass leader, 6.6% ahead of runner-up Mega Meganium.",
+      },
+      {
+        name: "Mega Gardevoir",
+        change: "C → C-",
+        rationale:
+          "Gardevoir is the full-pool Gym Fairy leader, 0.8% ahead of runner-up Mega Magearna. The previous Alakazam comparison was a neutral-target audit artifact that overcounted Psychic fast-move damage.",
       },
       {
         name: "Mega Absol Z",
         rationale:
-          "Absol Z is the full-pool Gym Dark leader, 4.9% ahead of Mega Zygarde.",
-      },
-      {
-        name: "Mega Lucario Z",
-        change: "A → C-",
-        rationale:
-          "Lucario Z is the full-pool Gym Fighting leader by 15.1% over Mega Lucario and Steel leader by 6.8% over Dusk Mane Necrozma.",
+          "Absol Z is the full-pool Gym Dark leader, 5.5% ahead of runner-up Mega Absol.",
       },
       {
         name: "Mega Zygarde",
         change: "A → C-",
         rationale:
-          "Zygarde is the full-pool Gym Ground leader, 16.9% ahead of Shadow Therian Landorus; its Dragon/Ground coverage is otherwise duplicated by Garchomp.",
+          "Zygarde is the full-pool Gym Dragon leader, 3.0% ahead of runner-up Eternatus. Shadow Therian Landorus remains faster for Ground damage.",
       },
       {
         name: "Mega Zeraora",
@@ -329,19 +499,12 @@ const tiers: Tier[] = [
         "Mega Clefable",
         "Mega Pinsir",
         "Mega Aerodactyl",
-        "Mega Meganium",
         "Mega Ampharos",
         "Mega Heracross",
         "Mega Skarmory",
         "Mega Tyranitar",
         "Mega Swampert"
       ),
-      {
-        name: "Mega Gardevoir",
-        change: "C → D+",
-        rationale:
-          "Gardevoir has no full-pool type lead: Mega Alakazam is 0.9% faster for Gym Fairy damage. Its unduplicated Psychic/Fairy aura retains the D+ coverage floor.",
-      },
       ...simpleEntries(
         "Mega Altaria",
         "Mega Abomasnow",
@@ -355,6 +518,7 @@ const tiers: Tier[] = [
         "Mega Malamar",
         "Mega Barbaracle",
         "Mega Dragalge",
+        "Mega Diancie",
         "Mega Crabominable",
         "Mega Drampa"
       ),
@@ -370,7 +534,6 @@ const tiers: Tier[] = [
       "Mega Steelix",
       "Mega Scizor",
       "Mega Blaziken",
-      "Mega Mawile",
       "Mega Chimecho",
       "Mega Metagross",
       "Mega Latias",
@@ -380,7 +543,6 @@ const tiers: Tier[] = [
       "Mega Excadrill",
       "Mega Hawlucha",
       "Mega Golisopod",
-      "Mega Magearna",
       "Mega Tatsugiri"
     ),
   },
@@ -394,6 +556,7 @@ const tiers: Tier[] = [
       "Mega Slowbro",
       "Mega Gyarados",
       "Mega Sableye",
+      "Mega Mawile",
       "Mega Medicham",
       "Mega Sharpedo",
       "Mega Salamence",
@@ -459,7 +622,8 @@ if (tierEntries.length !== 95 || new Set(tierEntries.map((entry) => entry.name))
         performance is the main combat lens. Two mutually boosted active Megas are compared against
         the best non-Mega pair supported from the back by Primal Kyogre, Primal Groudon, or Mega
         Rayquaza. Every tier follows an explicit combat, candy, full-pool type-leader, or coverage
-        rule.
+        rule. Baseline and weather-conditional results have separate tier labels, so a weather-only
+        win cannot be mistaken for an unconditional one.
       </p>
     </header>
 
@@ -517,15 +681,17 @@ if (tierEntries.length !== 95 || new Set(tierEntries.map((entry) => entry.name))
           type of the Pokemon actually caught.
         </li>
         <li>
-          Tier assignment is automatic. A requires at least one result that is both outright and
-          catch-aligned. B requires a catch-aligned result but no combined result. C+ requires an
-          outright result but no catch-aligned result. The highest applicable result wins.
+          Tier assignment is automatic and applies the combat rules in strict order. A is a
+          no-weather outright + catch-aligned result; A− is the same result only under weather. B+
+          is a no-weather catch-aligned result; B is weather-only catch alignment. B− is a
+          no-weather outright result; C+ is weather-only outright. The first applicable rule wins.
         </li>
         <li>
-          With no qualifying boss result, C requires the fastest neutral Party-of-2 strategy for a
-          Charged Attack type included in the candidate's own aura. This comparison includes every
-          mutually boosted active Mega or Primal and the best repeatable non-Mega under each of the
-          three backline auras; there is no Mega-only leaderboard.
+          With no qualifying boss result, C requires the fastest Party-of-2 strategy against a
+          synthetic target weak only to a Charged Attack type included in the candidate's own aura.
+          The audited type is 1.6× effective and every other attack type is neutral. This comparison
+          includes every mutually boosted active Mega or Primal and the best repeatable non-Mega
+          under each of the three backline auras; there is no Mega-only leaderboard.
         </li>
         <li>
           C− applies the same full-pool rule to Gym damage, comparing every Mega, Primal, and
@@ -559,9 +725,15 @@ if (tierEntries.length !== 95 || new Set(tierEntries.map((entry) => entry.name))
           Magearna—are labeled foreseeable assumptions rather than announced raids.
         </li>
         <li>
-          The profile sweep is a coverage check, not an equal-weight score. Survival, boss moves,
-          damage-derived energy, weather, breakpoints, relobbies, and when the backline booster
-          enters battle can change a specific raid simulation.
+          A separate weather sweep applies the current 1.2× attack bonus independently to every
+          matching Fast and Charged Attack on both sides, then reselects every moveset. Conditional
+          tiers record the exact weather that creates the qualifying result; no-weather evidence
+          always keeps its stronger corresponding label.
+        </li>
+        <li>
+          The profile sweep is a coverage check, not an equal-weight score. Boss moves and their own
+          weather boost, survival, damage-derived energy, breakpoints, relobbies, and when the
+          backline booster enters battle can change a specific raid simulation.
         </li>
       </ul>
       <p>
@@ -571,8 +743,16 @@ if (tierEntries.length !== 95 || new Set(tierEntries.map((entry) => entry.name))
           target="_blank"
           rel="noreferrer">Mega battle-bonus help</a
         >. See the <a href={officialMegaUpdate} target="_blank" rel="noreferrer"
-          >Mega Finale announcement</a
-        > for the additional-attack rules.
+        >Mega Finale announcement</a
+        > for the additional-attack rules. The <a
+          href={officialWeatherBoost}
+          target="_blank"
+          rel="noreferrer">official weather table</a
+        > supplies the seven boosted type groups; the current <a
+          href={gameMasterSource}
+          target="_blank"
+          rel="noreferrer">Game Master</a
+        > supplies the 1.2 attack multiplier.
         Released or announced target labels are cross-checked against <a
           href={officialRaidPool}
           target="_blank"
@@ -583,7 +763,9 @@ if (tierEntries.length !== 95 || new Set(tierEntries.map((entry) => entry.name))
         each tier, entries are ordered by National Pokedex number rather than strength. Run <code
           >npm run audit:megatier</code
           > to regenerate the target pool, background comparisons, full-pool type leaders,
-        mechanical tiers, and per-boss evidence whenever the Game Master changes.
+        mechanical tiers, and per-boss evidence whenever the Game Master changes. Add <code
+          >--weather cloudy</code
+          > for a conditional run or <code>--format summary</code> for a compact drift report.
       </p>
     </section>
 
@@ -637,6 +819,94 @@ if (tierEntries.length !== 95 || new Set(tierEntries.map((entry) => entry.name))
         will need rechecking when the records go live. Those permanent moves are calculation inputs,
         so they are not repeated in this table.
       </p>
+    </section>
+
+    <section class="result-panel weather-impact" aria-labelledby="weather-impact-heading">
+      <div class="section-heading-row">
+        <div>
+          <p class="eyebrow">Conditional tier evidence</p>
+          <h2 id="weather-impact-heading">Weather sensitivity</h2>
+        </div>
+        <span>7 conditions</span>
+      </div>
+      <p>
+        This is a second full 188-profile Party-of-2 sweep. Each condition applies the same exact
+        1.2× move-type boost to the active-Mega strategy and all three background strategies before
+        choosing movesets. The table records every non-S candidate whose strongest boss-based rule
+        improves relative to no weather; Snow explicitly records that none do. These results now
+        drive A−, B, and C+ while A, B+, and B− remain no-weather tiers. Use the interactive <a
+          href="/pvedps">PvE DPS ranking</a
+        > to inspect any type and weather combination.
+      </p>
+      <div class="table-wrap weather-findings-table">
+        <table>
+          <thead>
+            <tr>
+              <th>Weather</th>
+              <th>Boosted attack types</th>
+              <th>Conditional evidence</th>
+            </tr>
+          </thead>
+          <tbody>
+            {
+              weatherFindings.map((finding) => (
+                <tr>
+                  <th scope="row">{finding.weather}</th>
+                  <td>{finding.boostedTypes}</td>
+                  <td>{finding.evidence}</td>
+                </tr>
+              ))
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <div class="weather-checkpoint">
+        <h3>Steel-target checkpoint: Excadrill vs Heatran vs Lucario Z</h3>
+        <p>
+          DPS below uses a single Steel defender profile. Mewtwo X is included because the outright
+          comparison is never Mega-only; the background column is the best repeatable non-Mega with
+          Primal Kyogre, Primal Groudon, or Mega Rayquaza behind it.
+        </p>
+        <div class="table-wrap steel-weather-table">
+          <table>
+            <thead>
+              <tr>
+                <th>Weather</th>
+                <th>Mewtwo X</th>
+                <th>Lucario Z</th>
+                <th>Excadrill</th>
+                <th>Heatran</th>
+                <th>Best background</th>
+                <th>Mechanical result</th>
+              </tr>
+            </thead>
+            <tbody>
+              {
+                steelWeatherRows.map((row) => (
+                  <tr>
+                    <th scope="row">{row.weather}</th>
+                    <td>{row.mewtwoX}</td>
+                    <td>{row.lucarioZ}</td>
+                    <td>{row.excadrill}</td>
+                    <td>{row.heatran}</td>
+                    <td>{row.background}</td>
+                    <td>{row.result}</td>
+                  </tr>
+                ))
+              }
+            </tbody>
+          </table>
+        </div>
+        <p class="weather-verdict">
+          <strong>Verdict:</strong> Clear/Sunny does let Excadrill pass Lucario Z internally, but it
+          does not create raid utility because the Ground-boosted background is still faster.
+          Heatran never wins the three-way comparison. Only Cloudy creates a qualifying result:
+          Lucario Z becomes the catch-aligned Steel leader while Mewtwo X remains the outright
+          leader. Snow is irrelevant to this matchup because their selected attacks are Ground,
+          Fire, and Fighting rather than Steel.
+        </p>
+      </div>
     </section>
 
     <nav class="tier-jump" aria-label="Jump to tier">
@@ -694,6 +964,12 @@ if (tierEntries.length !== 95 || new Set(tierEntries.map((entry) => entry.name))
                           <dd>{entry.evidence.candyAligned}</dd>
                         </div>
                       )}
+                      {entry.evidence.conditional && (
+                        <div>
+                          <dt>Weather condition</dt>
+                          <dd>{entry.evidence.conditional}</dd>
+                        </div>
+                      )}
                     </dl>
                   )}
                 </li>
@@ -744,7 +1020,9 @@ if (tierEntries.length !== 95 || new Set(tierEntries.map((entry) => entry.name))
   }
 
   .methodology p,
-  .move-impact > p {
+  .move-impact > p,
+  .weather-impact > p,
+  .weather-checkpoint p {
     margin-bottom: 0;
     color: var(--muted);
     line-height: 1.55;
@@ -765,9 +1043,53 @@ if (tierEntries.length !== 95 || new Set(tierEntries.map((entry) => entry.name))
   }
 
   .methodology a,
-  .move-impact a {
+  .move-impact a,
+  .weather-impact a {
     color: var(--signal-hot);
     font-weight: 600;
+  }
+
+  .weather-findings-table table,
+  .steel-weather-table table {
+    white-space: normal;
+  }
+
+  .weather-findings-table th:first-child,
+  .weather-findings-table td:first-child {
+    min-width: 8rem;
+  }
+
+  .weather-findings-table th:nth-child(2),
+  .weather-findings-table td:nth-child(2) {
+    min-width: 10rem;
+  }
+
+  .weather-findings-table td:last-child,
+  .steel-weather-table td:last-child {
+    min-width: 20rem;
+    line-height: 1.45;
+  }
+
+  .weather-checkpoint {
+    margin-top: 1.4rem;
+  }
+
+  .weather-checkpoint h3 {
+    margin: 0;
+    font-size: 1.05rem;
+  }
+
+  .weather-checkpoint > p {
+    margin-top: 0.45rem;
+  }
+
+  .weather-checkpoint .weather-verdict {
+    margin-top: 0.9rem;
+    padding: 0.8rem 0.95rem;
+    border-left: 0.25rem solid var(--signal-warm);
+    border-radius: 0.35rem 0.8rem 0.8rem 0.35rem;
+    background: color-mix(in srgb, var(--signal-warm) 7%, white);
+    color: var(--ink);
   }
 
   .section-heading-row {
@@ -1008,12 +1330,18 @@ if (tierEntries.length !== 95 || new Set(tierEntries.map((entry) => entry.name))
   }
 
   [data-tier="a"],
-  [data-tier="b"] {
+  [data-tier="a-minus"] {
     --tier-color: #c2410c;
   }
 
-  [data-tier="c-plus"] {
+  [data-tier="b-plus"],
+  [data-tier="b"],
+  [data-tier="b-minus"] {
     --tier-color: #d97706;
+  }
+
+  [data-tier="c-plus"] {
+    --tier-color: #a16207;
   }
 
   [data-tier="c"],

@@ -21,6 +21,7 @@ const MEGA_LEVEL_FOUR_LEVEL = 52;
 const MEGA_LEVEL_FOUR_MOVE_MULTIPLIER = 1.3;
 const MATCHING_MEGA_TEAMMATE_MULTIPLIER = 1.3;
 const OTHER_MEGA_TEAMMATE_MULTIPLIER = 1.1;
+const WEATHER_ATTACK_MULTIPLIER = 1.2;
 const HIDDEN_POWER_MOVE_ID = 281;
 const STRUGGLE_MOVE_ID = 133;
 const RETURN_MOVE_ID = 323;
@@ -80,13 +81,79 @@ interface CarrierOptions {
 
 export type PvedpsMode = "gym" | "raid" | "party2" | "party3" | "party4";
 export type PvedpsAvailability = "Available" | "Unreleased";
+export type PvedpsWeather =
+  | "none"
+  | "clear"
+  | "rain"
+  | "partly-cloudy"
+  | "cloudy"
+  | "windy"
+  | "snow"
+  | "fog";
+
+export interface PvedpsWeatherOption {
+  value: PvedpsWeather;
+  label: string;
+  typeIds: readonly number[];
+  typeNames: readonly string[];
+}
+
+export const PVEDPS_WEATHER_OPTIONS: readonly PvedpsWeatherOption[] = [
+  { value: "none", label: "No weather", typeIds: [], typeNames: [] },
+  {
+    value: "clear",
+    label: "Clear / Sunny",
+    typeIds: [5, 10, 12],
+    typeNames: ["Ground", "Fire", "Grass"]
+  },
+  {
+    value: "rain",
+    label: "Rain",
+    typeIds: [7, 11, 13],
+    typeNames: ["Bug", "Water", "Electric"]
+  },
+  {
+    value: "partly-cloudy",
+    label: "Partly Cloudy",
+    typeIds: [1, 6],
+    typeNames: ["Normal", "Rock"]
+  },
+  {
+    value: "cloudy",
+    label: "Cloudy / Overcast",
+    typeIds: [2, 4, 18],
+    typeNames: ["Fighting", "Poison", "Fairy"]
+  },
+  {
+    value: "windy",
+    label: "Windy",
+    typeIds: [3, 14, 16],
+    typeNames: ["Flying", "Psychic", "Dragon"]
+  },
+  {
+    value: "snow",
+    label: "Snow",
+    typeIds: [9, 15],
+    typeNames: ["Steel", "Ice"]
+  },
+  {
+    value: "fog",
+    label: "Fog",
+    typeIds: [8, 17],
+    typeNames: ["Ghost", "Dark"]
+  }
+];
 
 export interface PvedpsInput {
   mode?: PvedpsMode;
   type1?: string;
   type2?: string;
+  /** Apply the current in-game 1.2x weather bonus to matching move types. */
+  weather?: PvedpsWeather;
   /** Restrict ranking rows to movesets whose Charged Attack has this type. */
   attackTypeId?: number;
+  /** Model a synthetic defender that is weak only to this attack type. */
+  benchmarkAttackTypeId?: number;
   /** Model a second Trainer using the same Mega/Primal and boosting this one's attacks. */
   megaTeammateBoost?: boolean;
   /** Apply one teammate's explicit Mega/Primal aura to every modeled attacker. */
@@ -97,7 +164,9 @@ interface ResolvedPvedpsInput {
   mode: PvedpsMode;
   type1: string;
   type2: string;
+  weatherBoostedTypeIds?: ReadonlySet<number>;
   attackTypeId?: number;
+  benchmarkAttackTypeId?: number;
   megaTeammateBoost: boolean;
   teammateAuraTypes?: ReadonlySet<number>;
 }
@@ -136,8 +205,20 @@ export function isPvedpsMode(value: string | null): value is PvedpsMode {
   return value !== null && Object.hasOwn(MODE_PARTY_COUNTS, value);
 }
 
+export function isPvedpsWeather(value: string | null): value is PvedpsWeather {
+  return value !== null && PVEDPS_WEATHER_OPTIONS.some((option) => option.value === value);
+}
+
 export function calculateMegaLevel4MovePower(power: number): number {
   return power * MEGA_LEVEL_FOUR_MOVE_MULTIPLIER;
+}
+
+export function calculateWeatherMoveMultiplier(
+  moveTypeId: number,
+  weather: PvedpsWeather
+): number {
+  const option = PVEDPS_WEATHER_OPTIONS.find((candidate) => candidate.value === weather);
+  return option?.typeIds.includes(moveTypeId) ? WEATHER_ATTACK_MULTIPLIER : 1;
 }
 
 export function listPvedpsTypeNames(masterfile: Masterfile): string[] {
@@ -204,6 +285,13 @@ function teammateAttackMultiplier(
   return teammateAuraTypes
     ? calculateMegaTeammateMoveMultiplier(typeId, teammateAuraTypes)
     : 1;
+}
+
+function weatherAttackMultiplier(
+  typeId: number,
+  weatherBoostedTypeIds: ReadonlySet<number> | undefined
+): number {
+  return weatherBoostedTypeIds?.has(typeId) ? WEATHER_ATTACK_MULTIPLIER : 1;
 }
 
 function resolveCarrierStats(
@@ -273,6 +361,19 @@ function resolveTypeMultipliers(
     result[entry.typeId] = 0.390625;
   }
   return result;
+}
+
+function resolveResistanceMaps(
+  masterfile: Masterfile,
+  input: ResolvedPvedpsInput
+): [ResistanceMap, ResistanceMap] {
+  if (input.benchmarkAttackTypeId !== undefined) {
+    return [{ [input.benchmarkAttackTypeId]: 1.6 }, {}];
+  }
+  return [
+    resolveTypeMultipliers(masterfile.types, input.type1),
+    resolveTypeMultipliers(masterfile.types, input.type2)
+  ];
 }
 
 function moveDamageMultiplier(typeId: number, first: ResistanceMap, second: ResistanceMap): number {
@@ -357,8 +458,7 @@ function pushCarrierRows(
 ): void {
   const partyCount = MODE_PARTY_COUNTS[input.mode];
   const partyQuicks = PARTY_QUICK_THRESHOLDS[partyCount];
-  const resistanceMap1 = resolveTypeMultipliers(masterfile.types, input.type1);
-  const resistanceMap2 = resolveTypeMultipliers(masterfile.types, input.type2);
+  const [resistanceMap1, resistanceMap2] = resolveResistanceMaps(masterfile, input);
   const stabTypes = new Set(resolveCarrierTypes(carrier, pokemonData).map((type) => type.typeId));
   const chargedMoveIds = resolveMoveIds(carrier, pokemonData, "chargedMoves", "eliteChargedMoves");
   if (
@@ -392,6 +492,7 @@ function pushCarrierRows(
         (DPS_SCALE *
           (quickMove.power ?? 0) *
           moveDamageMultiplier(quickType, resistanceMap1, resistanceMap2) *
+          weatherAttackMultiplier(quickType, input.weatherBoostedTypeIds) *
           teammateAttackMultiplier(quickType, options.teammateAuraTypes)) /
         quickDuration;
       if (stabTypes.has(quickType)) {
@@ -421,6 +522,10 @@ function pushCarrierRows(
                 DPS_SCALE *
                 (chargedMove.power ?? 0) *
                 moveDamageMultiplier(resolveMoveTypeId(chargedMove), resistanceMap1, resistanceMap2) *
+                weatherAttackMultiplier(
+                  resolveMoveTypeId(chargedMove),
+                  input.weatherBoostedTypeIds
+                ) *
                 teammateAttackMultiplier(
                   resolveMoveTypeId(chargedMove),
                   options.teammateAuraTypes
@@ -456,6 +561,7 @@ function pushCarrierRows(
           DPS_SCALE *
           power *
           moveDamageMultiplier(chargedType, resistanceMap1, resistanceMap2) *
+          weatherAttackMultiplier(chargedType, input.weatherBoostedTypeIds) *
           teammateAttackMultiplier(chargedType, options.teammateAuraTypes);
         if (stabTypes.has(chargedType)) {
           chargedDamage *= STAB_MULTIPLIER;
@@ -503,6 +609,7 @@ function pushCarrierRows(
         (DPS_SCALE *
           (struggle.power ?? 0) *
           moveDamageMultiplier(struggleType, resistanceMap1, resistanceMap2) *
+          weatherAttackMultiplier(struggleType, input.weatherBoostedTypeIds) *
           teammateAttackMultiplier(struggleType, options.teammateAuraTypes)) /
         durationMs(struggle, partyCount);
       if (stabTypes.has(struggleType)) {
@@ -587,8 +694,7 @@ function pushApexRows(
   if (input.attackTypeId !== undefined && chargedType !== input.attackTypeId) {
     return;
   }
-  const resistanceMap1 = resolveTypeMultipliers(masterfile.types, input.type1);
-  const resistanceMap2 = resolveTypeMultipliers(masterfile.types, input.type2);
+  const [resistanceMap1, resistanceMap2] = resolveResistanceMaps(masterfile, input);
   const stabTypes = new Set(Object.values(pokemon.types ?? {}).map((type) => type.typeId));
   let bestMoves: PvedpsMoveset[] = [];
   for (const quickMoveId of (pokemon.quickMoves ?? []).concat(pokemon.eliteQuickMoves ?? [])) {
@@ -609,6 +715,7 @@ function pushApexRows(
         (DPS_SCALE *
           (quickMove.power ?? 0) *
           moveDamageMultiplier(quickType, resistanceMap1, resistanceMap2) *
+          weatherAttackMultiplier(quickType, input.weatherBoostedTypeIds) *
           teammateAttackMultiplier(quickType, input.teammateAuraTypes)) /
         quickDuration;
       if (stabTypes.has(quickType)) {
@@ -618,6 +725,7 @@ function pushApexRows(
         DPS_SCALE *
         (chargedMove.power ?? 0) *
         moveDamageMultiplier(chargedType, resistanceMap1, resistanceMap2) *
+        weatherAttackMultiplier(chargedType, input.weatherBoostedTypeIds) *
         teammateAttackMultiplier(chargedType, input.teammateAuraTypes);
       if (stabTypes.has(chargedType)) {
         chargedDamage *= STAB_MULTIPLIER;
@@ -686,14 +794,31 @@ export function assertPvedpsMasterfile(masterfile: Masterfile): void {
 export function buildPvedpsRows(masterfile: Masterfile, input: PvedpsInput = {}): PvedpsRow[] {
   assertPvedpsMasterfile(masterfile);
   const teammateAuraTypeIds = input.teammateAuraTypeIds ?? [];
+  const weather = PVEDPS_WEATHER_OPTIONS.find(
+    (option) => option.value === (input.weather ?? "none")
+  );
+  if (!weather) {
+    throw new Error(`Unsupported PvE weather: ${input.weather}`);
+  }
   if (input.megaTeammateBoost && teammateAuraTypeIds.length) {
     throw new Error("megaTeammateBoost and teammateAuraTypeIds model different strategies");
+  }
+  if (
+    input.benchmarkAttackTypeId !== undefined &&
+    [input.type1, input.type2].some((typeName) => {
+      const lookup = typeName?.trim();
+      return Boolean(lookup && lookup !== "None");
+    })
+  ) {
+    throw new Error("benchmarkAttackTypeId cannot be combined with explicit defender types");
   }
   const resolvedInput: ResolvedPvedpsInput = {
     mode: input.mode ?? "party2",
     type1: input.type1 ?? "None",
     type2: input.type2 ?? "None",
+    weatherBoostedTypeIds: weather.typeIds.length ? new Set(weather.typeIds) : undefined,
     attackTypeId: input.attackTypeId,
+    benchmarkAttackTypeId: input.benchmarkAttackTypeId,
     megaTeammateBoost: input.megaTeammateBoost ?? false,
     teammateAuraTypes: teammateAuraTypeIds.length ? new Set(teammateAuraTypeIds) : undefined
   };
