@@ -1,6 +1,7 @@
 import type { PvedpsWeather } from "./pvedps";
 
 export type MegaCombatTier = "A" | "A-" | "B+" | "B" | "B-" | "C+";
+export type MegaCoverageTier = "D+" | "D" | "E" | "F";
 
 export interface MegaCombatTierEvidence {
   baselineOutrightAndCatchAligned: boolean;
@@ -17,7 +18,28 @@ export interface MegaWeatherCombatEvidence {
   outright: boolean;
 }
 
+export interface MegaCoverageTierEvidence {
+  auraTypeCount: number;
+  hasExactDuplicate: boolean;
+  hasHigherTierExactDuplicate: boolean;
+  hasHigherTierStrictSuperset: boolean;
+}
+
 export type MegaWeatherTierAudit = Map<string, MegaWeatherCombatEvidence>;
+
+export const MEGA_TIER_LEADER_TOLERANCE = 0.01;
+
+/** Treat strategies within 1% of the nominal DPS leader as scenario-dependent co-leaders. */
+export function isWithinMegaTierLeaderTolerance(
+  candidateDps: number,
+  leaderDps: number
+): boolean {
+  return candidateDps >= leaderDps * (1 - MEGA_TIER_LEADER_TOLERANCE);
+}
+
+export function isMegaTierTypeFloor(typeName: string): boolean {
+  return typeName !== "None" && typeName !== "Normal";
+}
 
 /** Apply the evidence-only combat tier rules from strongest to weakest. */
 export function classifyMegaCombatTier(
@@ -30,6 +52,15 @@ export function classifyMegaCombatTier(
   if (evidence.baselineOutright) return "B-";
   if (evidence.weatherOutright) return "C+";
   return undefined;
+}
+
+/** Apply backline containment before exact-duplicate coverage rules. */
+export function classifyMegaCoverageTier(
+  evidence: MegaCoverageTierEvidence
+): MegaCoverageTier {
+  if (evidence.auraTypeCount < 2 || evidence.hasHigherTierStrictSuperset) return "F";
+  if (evidence.hasExactDuplicate) return evidence.hasHigherTierExactDuplicate ? "E" : "D";
+  return "D+";
 }
 
 export function parseMegaWeatherTierSummary(

@@ -2,6 +2,9 @@ import { describe, expect, it } from "vitest";
 
 import {
   classifyMegaCombatTier,
+  classifyMegaCoverageTier,
+  isMegaTierTypeFloor,
+  isWithinMegaTierLeaderTolerance,
   parseMegaWeatherTierSummary,
   type MegaCombatTierEvidence
 } from "../src/lib/pogo/megatier";
@@ -16,6 +19,54 @@ const noEvidence: MegaCombatTierEvidence = {
 };
 
 describe("Mega combat tier rules", () => {
+  it("treats strategies within 1% of the DPS leader as co-leaders", () => {
+    expect(isWithinMegaTierLeaderTolerance(100, 100)).toBe(true);
+    expect(isWithinMegaTierLeaderTolerance(99, 100)).toBe(true);
+    expect(isWithinMegaTierLeaderTolerance(98.99, 100)).toBe(false);
+    expect(isWithinMegaTierLeaderTolerance(101, 100)).toBe(true);
+  });
+
+  it("excludes impossible Normal weaknesses from every type floor", () => {
+    expect(isMegaTierTypeFloor("None")).toBe(false);
+    expect(isMegaTierTypeFloor("Normal")).toBe(false);
+    expect(isMegaTierTypeFloor("Dragon")).toBe(true);
+  });
+
+  it("lets a higher-tier strict aura superset override exact-duplicate tiers", () => {
+    expect(
+      classifyMegaCoverageTier({
+        auraTypeCount: 2,
+        hasExactDuplicate: true,
+        hasHigherTierExactDuplicate: true,
+        hasHigherTierStrictSuperset: true
+      })
+    ).toBe("F");
+    expect(
+      classifyMegaCoverageTier({
+        auraTypeCount: 2,
+        hasExactDuplicate: true,
+        hasHigherTierExactDuplicate: true,
+        hasHigherTierStrictSuperset: false
+      })
+    ).toBe("E");
+    expect(
+      classifyMegaCoverageTier({
+        auraTypeCount: 2,
+        hasExactDuplicate: true,
+        hasHigherTierExactDuplicate: false,
+        hasHigherTierStrictSuperset: false
+      })
+    ).toBe("D");
+    expect(
+      classifyMegaCoverageTier({
+        auraTypeCount: 2,
+        hasExactDuplicate: false,
+        hasHigherTierExactDuplicate: false,
+        hasHigherTierStrictSuperset: false
+      })
+    ).toBe("D+");
+  });
+
   it.each([
     ["baselineOutrightAndCatchAligned", "A"],
     ["weatherOutrightAndCatchAligned", "A-"],

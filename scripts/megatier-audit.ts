@@ -3,7 +3,7 @@
  *
  * The audit answers two Party-of-2 questions without awarding utility merely for
  * occupying a Mega slot:
- *   1. Which mutually boosted Mega/Primal beats every background-booster strategy?
+ *   1. Which mutually boosted Mega/Primal is within 1% of every background-booster strategy?
  *   2. Which does so after excluding choices that do not boost encounter candy?
  *
  * Each active Mega is modeled alongside the same Mega on the other Trainer. The
@@ -13,9 +13,10 @@
  * best moveset is selected after those multipliers apply.
  *
  * The C and C- type floors are full-pool comparisons against a synthetic target
- * weak only to the audited Charged Attack type. Party of 2 ranks every mutually
- * boosted active Mega/Primal against every background-booster strategy; Gym ranks
- * every Mega, Primal, and non-Mega without a teammate aura.
+ * weak only to the audited Charged Attack type. Normal is excluded because it
+ * cannot be super effective. Party of 2 ranks every mutually boosted active
+ * Mega/Primal against every background-booster strategy; Gym ranks every Mega,
+ * Primal, and non-Mega without a teammate aura.
  *
  * Usage:
  *   npm run audit:megatier
@@ -50,6 +51,9 @@ import {
 } from "../src/lib/pogo/pvedps";
 import {
   classifyMegaCombatTier,
+  classifyMegaCoverageTier,
+  isMegaTierTypeFloor,
+  isWithinMegaTierLeaderTolerance,
   parseMegaWeatherTierSummary,
   type MegaCombatTier,
   type MegaWeatherCombatEvidence,
@@ -124,8 +128,8 @@ interface AuditMatchup {
   outright: boolean;
   candyAligned: boolean;
   candidate: MegaResult;
-  outrightLeader: MegaResult;
-  candyLeader?: MegaResult;
+  outrightLeaders: MegaResult[];
+  candyLeaders: MegaResult[];
   unboostedLeader: PvedpsRow;
   backgroundLeader: BackgroundResult;
   quickEffectiveness: number;
@@ -797,26 +801,41 @@ function buildAudit(
     );
     const outrightLeader = megaResults[0];
     if (!outrightLeader) continue;
+    const outrightLeaders = megaResults.filter((candidate) =>
+      isWithinMegaTierLeaderTolerance(candidate.boostedDps, outrightLeader.boostedDps)
+    );
 
     for (const boss of matchingBosses) {
-      const candyLeader = megaResults.find((candidate) =>
+      const candyCandidates = megaResults.filter((candidate) =>
         candidate.auraTypes.some((type) => boss.catchTypes.includes(type))
+      );
+      const candyLeader = candyCandidates[0];
+      const candyLeaders = candyLeader
+        ? candyCandidates.filter((candidate) =>
+            isWithinMegaTierLeaderTolerance(candidate.boostedDps, candyLeader.boostedDps)
+          )
+        : [];
+      const qualifyingOutrightLeaders = outrightLeaders.filter((candidate) =>
+        isWithinMegaTierLeaderTolerance(candidate.boostedDps, backgroundLeader.row.dps)
+      );
+      const qualifyingCandyLeaders = candyLeaders.filter((candidate) =>
+        isWithinMegaTierLeaderTolerance(candidate.boostedDps, backgroundLeader.row.dps)
       );
       const candidates = new Map<
         string,
         { candidate: MegaResult; outright: boolean; candyAligned: boolean }
       >();
-      if (outrightLeader.boostedDps > backgroundLeader.row.dps) {
-        candidates.set(outrightLeader.name, {
-          candidate: outrightLeader,
+      for (const candidate of qualifyingOutrightLeaders) {
+        candidates.set(candidate.name, {
+          candidate,
           outright: true,
           candyAligned: false
         });
       }
-      if (candyLeader && candyLeader.boostedDps > backgroundLeader.row.dps) {
-        const existing = candidates.get(candyLeader.name);
-        candidates.set(candyLeader.name, {
-          candidate: candyLeader,
+      for (const candidate of qualifyingCandyLeaders) {
+        const existing = candidates.get(candidate.name);
+        candidates.set(candidate.name, {
+          candidate,
           outright: existing?.outright ?? false,
           candyAligned: true
         });
@@ -833,8 +852,8 @@ function buildAudit(
           outright: entry.outright,
           candyAligned: entry.candyAligned,
           candidate,
-          outrightLeader,
-          candyLeader,
+          outrightLeaders: qualifyingOutrightLeaders,
+          candyLeaders: qualifyingCandyLeaders,
           unboostedLeader,
           backgroundLeader,
           quickEffectiveness: effectiveness(masterfile, quickType, boss.defenseTypes),
@@ -865,7 +884,7 @@ function buildTypeLeaderAudit(
   for (const type of Object.values(masterfile.types).sort(
     (left, right) => left.typeId - right.typeId
   )) {
-    if (type.typeName === "None" || (mode === "gym" && type.typeName === "Normal")) continue;
+    if (!isMegaTierTypeFloor(type.typeName)) continue;
     const rows = buildPvedpsRows(masterfile, {
       mode,
       attackTypeId: type.typeId,
@@ -910,17 +929,23 @@ function buildTypeLeaderAudit(
     const leaderDps = rankedStrategies[0]?.[1].dps;
     if (leaderDps === undefined) continue;
     const winningStrategies = rankedStrategies
-      .filter(([, row]) => Math.abs(row.dps - leaderDps) < 1e-9)
+      .filter(([, row]) => isWithinMegaTierLeaderTolerance(row.dps, leaderDps))
       .map(([name]) => name);
     const megaLeaders = winningStrategies.filter((name) =>
       identities.get(name)?.auraTypeIds.includes(type.typeId)
     );
-    const runnerUpDps = rankedStrategies.find(([, row]) => row.dps < leaderDps - 1e-9)?.[1].dps;
+    const runnerUpDps = rankedStrategies.find(
+      ([, row]) => !isWithinMegaTierLeaderTolerance(row.dps, leaderDps)
+    )?.[1].dps;
     const runnerUpStrategies =
       runnerUpDps === undefined
         ? []
         : rankedStrategies
-            .filter(([, row]) => Math.abs(row.dps - runnerUpDps) < 1e-9)
+            .filter(
+              ([, row]) =>
+                !isWithinMegaTierLeaderTolerance(row.dps, leaderDps) &&
+                isWithinMegaTierLeaderTolerance(row.dps, runnerUpDps)
+            )
             .map(([name]) => name);
     comparisons.push({
       type: type.typeName,
@@ -1018,16 +1043,16 @@ function buildMechanicalTiers(
     );
     const exactDuplicates = coveringMegas.filter((candidate) => sameAura(candidate, identity));
     const strictSupersets = coveringMegas.filter((candidate) => !sameAura(candidate, identity));
-    let tier: MechanicalTier;
-    if (identity.auraTypeIds.length < 2) {
-      tier = "F";
-    } else if (exactDuplicates.length) {
-      tier = exactDuplicates.some((candidate) => higherTierNames.has(candidate.name)) ? "E" : "D";
-    } else if (strictSupersets.some((candidate) => higherTierNames.has(candidate.name))) {
-      tier = "F";
-    } else {
-      tier = "D+";
-    }
+    const tier = classifyMegaCoverageTier({
+      auraTypeCount: identity.auraTypeIds.length,
+      hasExactDuplicate: exactDuplicates.length > 0,
+      hasHigherTierExactDuplicate: exactDuplicates.some((candidate) =>
+        higherTierNames.has(candidate.name)
+      ),
+      hasHigherTierStrictSuperset: strictSupersets.some((candidate) =>
+        higherTierNames.has(candidate.name)
+      )
+    });
     assignments.set(identity.name, {
       tier,
       party2TypeLeads: [],
@@ -1148,7 +1173,7 @@ function outputMarkdown(
     "- Background strategy: both Trainers lead the best repeatable non-Mega while carrying Primal Kyogre, Primal Groudon, or Mega Rayquaza in back; movesets are reselected for each exact aura"
   );
   console.log(
-    "- Qualification: the mutually boosted Mega/Primal must beat the best of those three background strategies; catch-aligned also requires its aura to cover the encounter type"
+    "- Qualification: a strategy within 1% of the nominal DPS leader is a scenario-dependent co-leader; catch-aligned also requires its aura to cover the encounter type"
   );
   if (tierAudit) {
     console.log(
@@ -1156,7 +1181,7 @@ function outputMarkdown(
     );
   }
   console.log(
-    "- Type floors: the audited type is 1.6x effective and every other attack type is neutral; Party of 2 compares every active Mega/Primal with every background-supported non-Mega; Gym compares every attacker"
+    "- Type floors: Normal is excluded; the audited type is 1.6x effective and every other attack type is neutral; Party of 2 compares every active Mega/Primal with every background-supported non-Mega; Gym compares every attacker"
   );
 
   if (tierAudit) {
@@ -1249,8 +1274,8 @@ function outputTsv(
       "backgroundChargedWeatherMultiplier",
       "backgroundDps",
       "megaMarginPercent",
-      "outrightMegaLeader",
-      "candyMegaLeader",
+      "outrightMegaLeaders",
+      "candyMegaLeaders",
       "unboostedNonMegaLeader"
     ].join("\t")
   );
@@ -1290,8 +1315,8 @@ function outputTsv(
           background.chargedWeatherMultiplier,
           background.row.dps,
           (candidate.boostedDps / background.row.dps - 1) * 100,
-          matchup.outrightLeader.name,
-          matchup.candyLeader?.name ?? "-",
+          matchup.outrightLeaders.map((leader) => leader.name).join(","),
+          matchup.candyLeaders.map((leader) => leader.name).join(",") || "-",
           formatAttacker(matchup.unboostedLeader)
         ].join("\t")
       );
@@ -1507,8 +1532,8 @@ function outputJson(
             chargedWeatherMultiplier: background.chargedWeatherMultiplier
           },
           leaders: {
-            outrightMega: matchup.outrightLeader.name,
-            candyAlignedMega: matchup.candyLeader?.name ?? null,
+            outrightMegas: matchup.outrightLeaders.map((leader) => leader.name),
+            candyAlignedMegas: matchup.candyLeaders.map((leader) => leader.name),
             unboostedNonMega: formatAttacker(matchup.unboostedLeader)
           }
         };
@@ -1525,6 +1550,7 @@ function outputJson(
           megaLevel: 52,
           comparison:
             "same-mega-mutual-aura-vs-best-background-primal-or-rayquaza-repeatable-non-mega",
+          leaderTolerancePercent: 1,
           auraMultipliers: { matchingMoveType: 1.3, otherMoveType: 1.1 },
           weather: {
             value: options.weather,
