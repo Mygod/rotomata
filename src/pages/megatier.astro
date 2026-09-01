@@ -4,7 +4,6 @@ import BaseLayout from "../layouts/BaseLayout.astro";
 interface TierEntry {
   name: string;
   rationale?: string;
-  change?: string;
   projection?: "Announced move" | "Unreleased";
   evidence?: {
     outrightAligned?: string;
@@ -42,8 +41,8 @@ const officialWeatherBoost =
   "https://niantic.helpshift.com/hc/en/6-pokemon-go/faq/53-what-are-weather-boosts/?f=weather-boosts&l=en";
 const gameMasterSource =
   "https://raw.githubusercontent.com/alexelgt/game_masters/refs/heads/master/GAME_MASTER.json";
-const originalTierList =
-  "https://tiermaker.com/list/pokemon/pokemon-mega-evolutions-18840649/6197835";
+const visualTierList =
+  "https://tiermaker.com/list/pokemon/pokemon-mega-evolutions-18840649/6575691";
 
 const plusMoves: PlusMove[] = [
   {
@@ -115,7 +114,6 @@ const tiers: Tier[] = [
     entries: [
       {
         name: "Mega Victreebel",
-        change: "D → A",
         rationale:
           "Acid and Acid Spray+ both receive 1.3× against Tapu Bulu. Victreebel is simultaneously the outright and catch-aligned leader there, beating the best background strategy—Crowned Sword Zacian supported by Primal Kyogre—by 33.7%.",
         evidence: {
@@ -124,7 +122,6 @@ const tiers: Tier[] = [
       },
       {
         name: "Mega Starmie",
-        change: "D → A",
         rationale:
           "Liquidation+ makes Starmie both outright and catch-aligned against Victini by 7.5% over the best background-supported non-Mega. It is also the outright leader across the modeled Fire and Ground pool by 10.4% to 52.2%, and the catch-aligned leader for Iron Boulder by 7.5%.",
         evidence: {
@@ -136,7 +133,6 @@ const tiers: Tier[] = [
       },
       {
         name: "Mega Dragonite",
-        change: "F → A",
         rationale:
           "Dragon Breath and Outrage+ both receive 1.3×. Dragonite is outright and catch-aligned on 13 Dragon profiles by 1.5% to 7.4% over the best background strategy, and remains the catch-aligned leader on 12 more by 1.1% to 7.4%.",
         evidence: {
@@ -178,7 +174,6 @@ const tiers: Tier[] = [
     entries: [
       {
         name: "Mega Raichu Y",
-        change: "F → A-",
         rationale:
           "Without weather, Raichu Y has three catch-aligned leads and 23 separate outright wins, but no combined profile. Rain makes Zapdos and both Thundurus formes simultaneously outright and catch-aligned by 28.7%, which mechanically places it in A-.",
         evidence: {
@@ -191,7 +186,6 @@ const tiers: Tier[] = [
       },
       {
         name: "Mega Mewtwo Y",
-        change: "C → A-",
         rationale:
           "Without weather, Future Sight+ gives Mewtwo Y 25 outright wins but no catch-aligned lead. Windy makes it both outright and catch-aligned for Mega Mewtwo X and Munkidori by 7.9% to 14.5%, so the weather-conditional combined rule places it in A-.",
         evidence: {
@@ -203,7 +197,6 @@ const tiers: Tier[] = [
       },
       {
         name: "Mega Delphox",
-        change: "C- → A-",
         rationale:
           "Without weather, Delphox is catch-aligned for Ice Rider Calyrex and outright on eight separate Bug profiles. Clear/Sunny makes the Ice Rider Calyrex result outright as well as catch-aligned by 13.4%, satisfying A- but not the no-weather A rule.",
         evidence: {
@@ -224,7 +217,6 @@ const tiers: Tier[] = [
     entries: [
       {
         name: "Mega Lopunny",
-        change: "D+ → B+",
         rationale:
           "Low Kick and Focus Blast both receive 1.3×. Lopunny is the fastest catch-aligned strategy for all five modeled Normal encounters, beating Pheromosa supported by Primal Kyogre by 7.3%; Mewtwo X remains outright, and no weather creates a combined result.",
         evidence: {
@@ -233,7 +225,6 @@ const tiers: Tier[] = [
       },
       {
         name: "Mega Greninja",
-        change: "C- → B+",
         rationale:
           "Water Shuriken and Surf+ both receive 1.3×. Greninja is the no-weather catch-aligned duo leader against Ting-Lu, beating Bug Bite/Focus Blast Pheromosa supported by Primal Kyogre by 26.7%; Starmie remains outright, and no weather creates a combined result.",
         evidence: {
@@ -250,7 +241,6 @@ const tiers: Tier[] = [
     entries: [
       {
         name: "Mega Meganium",
-        change: "C → B",
         rationale:
           "Meganium has no qualifying no-weather boss result. Under Clear/Sunny, its Grass/Fairy package becomes the catch-aligned leader for Tapu Fini and beats the best background strategy by 0.5%; it is not outright, so the conditional catch rule places it in B.",
         evidence: {
@@ -259,7 +249,6 @@ const tiers: Tier[] = [
       },
       {
         name: "Mega Lucario Z",
-        change: "A → B",
         rationale:
           "Lucario Z has no qualifying no-weather boss result. Cloudy/Overcast makes it the catch-aligned leader on eight Steel encounters by 10.0%, while Mewtwo X remains the outright strategy; that is exactly the conditional B rule.",
         evidence: {
@@ -269,7 +258,6 @@ const tiers: Tier[] = [
       },
       {
         name: "Mega Chesnaught",
-        change: "D+ → B",
         rationale:
           "Chesnaught has no qualifying no-weather boss result. Clear/Sunny makes it catch-aligned for Keldeo and Rapid Strike Urshifu by 17.9%; it also becomes outright on the modeled Ground profiles by 29.7%, but those are separate targets, so B outranks conditional C+.",
         evidence: {
@@ -287,7 +275,6 @@ const tiers: Tier[] = [
     entries: [
       {
         name: "Mega Beedrill",
-        change: "C- → B-",
         projection: "Announced move",
         rationale:
           "Projected Fell Stinger+ gives Beedrill 34 no-weather outright wins by 12.8% to 71.2% over the best background-supported non-Mega strategy. None is catch-aligned, and no weather creates a catch-aligned result, so it lands in B-.",
@@ -298,7 +285,6 @@ const tiers: Tier[] = [
       },
       {
         name: "Mega Houndoom",
-        change: "D+ → B-",
         projection: "Announced move",
         rationale:
           "With projected Dark Pulse+, Houndoom is only 0.09% behind Dawn Wings Necrozma supported by backline Mega Rayquaza against Hoopa, Lunala, Dawn Wings Necrozma, and Shadow Rider Calyrex. Those four scenario-dependent no-weather co-leads satisfy B-; none is catch-aligned.",
@@ -317,7 +303,6 @@ const tiers: Tier[] = [
     entries: [
       {
         name: "Mega Glimmora",
-        change: "C → C+",
         rationale:
           "Glimmora is the no-weather Party-of-2 Rock type leader but has no qualifying boss win. Partly Cloudy makes it outright for Articuno, Moltres, and Ho-Oh by 12.1%; none is catch-aligned, so it meets conditional C+.",
         evidence: {
@@ -335,7 +320,6 @@ const tiers: Tier[] = [
     entries: [
       {
         name: "Mega Magearna",
-        change: "D → C",
         rationale:
           "Magearna is the full-pool Party-of-2 Fairy leader, 1.4% ahead of runner-up Mega Diancie, but it does not gain a qualifying boss result in any audited weather.",
       },
@@ -349,7 +333,6 @@ const tiers: Tier[] = [
     entries: [
       {
         name: "Mega Gengar",
-        change: "A → C-",
         rationale:
           "Gengar is the full-pool Gym Ghost leader, 7.6% ahead of runner-up Mega Chandelure. It does not win a modeled raid-boss matchup.",
       },
@@ -360,7 +343,6 @@ const tiers: Tier[] = [
       },
       {
         name: "Mega Gardevoir",
-        change: "C → C-",
         rationale:
           "Gardevoir is the nominal full-pool Gym Fairy leader, with Mega Magearna only 0.8% behind and therefore a co-leader under the 1% rule. The previous Alakazam comparison was a neutral-target audit artifact that overcounted Psychic fast-move damage.",
       },
@@ -371,13 +353,11 @@ const tiers: Tier[] = [
       },
       {
         name: "Mega Zygarde",
-        change: "A → C-",
         rationale:
           "Zygarde is the full-pool Gym Dragon leader, 3.0% ahead of runner-up Eternatus. Shadow Therian Landorus remains faster for Ground damage.",
       },
       {
         name: "Mega Zeraora",
-        change: "C → C-",
         rationale:
           "Zeraora is the full-pool Gym Electric leader, 9.9% ahead of Shadow Therian Thundurus; Raichu Y takes the Party-of-2 Electric lead.",
       },
@@ -503,7 +483,6 @@ const tiers: Tier[] = [
       ),
       {
         name: "Mega Scovillain",
-        change: "E → F",
         rationale:
           "Its otherwise unique Fire/Grass package is strictly contained by S-tier Primal Groudon's Fire/Grass/Ground backline aura.",
       },
@@ -538,13 +517,12 @@ if (tierEntries.length !== 95 || new Set(tierEntries.map((entry) => entry.name))
       </p>
     </header>
 
-    <aside class="archive-note" aria-label="Historical tier list">
+    <aside class="tiermaker-note" aria-label="Visual tier list">
       <div>
-        <strong>Pre-update baseline.</strong> The original visual tier list is preserved separately
-        for comparison with the post-“+” ranking.
+        <strong>Visual tier list.</strong> The current ranking is also available on TierMaker.
       </div>
-      <a href={originalTierList} target="_blank" rel="noreferrer">
-        View the pre-“+” tier list on TierMaker
+      <a href={visualTierList} target="_blank" rel="noreferrer">
+        View the current tier list on TierMaker
       </a>
     </aside>
 
@@ -767,7 +745,6 @@ if (tierEntries.length !== 95 || new Set(tierEntries.map((entry) => entry.name))
                 >
                   <div class="member-title">
                     <strong>{entry.name}</strong>
-                    {entry.change && <span class="change-badge">{entry.change}</span>}
                     {entry.projection && <span class="projection-badge">{entry.projection}</span>}
                   </div>
                   {entry.rationale && <span class="member-rationale">{entry.rationale}</span>}
@@ -815,7 +792,7 @@ if (tierEntries.length !== 95 || new Set(tierEntries.map((entry) => entry.name))
     margin: 0 auto;
   }
 
-  .archive-note {
+  .tiermaker-note {
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -829,11 +806,11 @@ if (tierEntries.length !== 95 || new Set(tierEntries.map((entry) => entry.name))
     line-height: 1.5;
   }
 
-  .archive-note strong {
+  .tiermaker-note strong {
     color: var(--ink);
   }
 
-  .archive-note a {
+  .tiermaker-note a {
     flex: 0 0 auto;
     color: var(--signal-hot);
     font-weight: 600;
@@ -941,7 +918,6 @@ if (tierEntries.length !== 95 || new Set(tierEntries.map((entry) => entry.name))
     font-weight: 650;
   }
 
-  .change-badge,
   .projection-badge {
     display: inline-flex;
     align-items: center;
@@ -1094,7 +1070,6 @@ if (tierEntries.length !== 95 || new Set(tierEntries.map((entry) => entry.name))
     line-height: 1.45;
   }
 
-  .change-badge,
   .projection-badge {
     padding: 0.28rem 0.45rem;
     background: color-mix(in srgb, var(--tier-color, var(--muted)) 12%, white);
@@ -1144,12 +1119,12 @@ if (tierEntries.length !== 95 || new Set(tierEntries.map((entry) => entry.name))
   }
 
   @media (max-width: 640px) {
-    .archive-note {
+    .tiermaker-note {
       align-items: flex-start;
       flex-direction: column;
     }
 
-    .archive-note a {
+    .tiermaker-note a {
       flex-basis: auto;
     }
 
