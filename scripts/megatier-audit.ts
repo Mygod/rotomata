@@ -376,7 +376,7 @@ Options:
   --format FORMAT         markdown, tsv, json, or summary (default: markdown)
   --pokemon NAME          Limit output to one Mega/Primal; may be repeated
   --weather WEATHER       none, clear, rain, partly-cloudy, cloudy, windy, snow, or fog
-  --no-projections        Do not project announced Fell Stinger+ and Dark Pulse+
+  --no-projections        Do not project announced additional Charged Attacks
   --list-bosses           Print the complete modeled boss pool and exit
   --help                  Show this help`);
   process.exit(0);
@@ -483,7 +483,8 @@ function addProjectedMove(
 function applyAnnouncedProjections(masterfile: Masterfile): ProjectionResult[] {
   return [
     addProjectedMove(masterfile, 15, 10_001, 311, "Fell Stinger+", 140),
-    addProjectedMove(masterfile, 229, 10_002, 16, "Dark Pulse+", 150)
+    addProjectedMove(masterfile, 229, 10_002, 16, "Dark Pulse+", 150),
+    addProjectedMove(masterfile, 398, 10_003, 256, "Brave Bird+", 150)
   ];
 }
 

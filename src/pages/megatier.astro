@@ -30,6 +30,8 @@ interface PlusMove {
 
 const officialMegaUpdate = "https://pokemongo.com/news/more-mega-updates-2026";
 const officialMegaSquads = "https://pokemongo.com/en/news/mega-squads-2026";
+const officialMegaStaraptor =
+  "https://pokemongo.com/news/staraptor-super-mega-raid-day-2026";
 const officialRaidPool = "https://pokemongo.com/news/road-of-legends-2026?hl=en";
 const officialMegaFinale = "https://pokemongo.com/gofest/megafinale";
 const officialHoopaRaid = "https://pokemongo.com/post/elite-raids-new-feature?hl=en";
@@ -58,6 +60,13 @@ const plusMoves: PlusMove[] = [
     basePower: 150,
     effectivePower: 195,
     party2Gain: "+55.9%",
+  },
+  {
+    pokemon: "Mega Staraptor",
+    move: "Brave Bird+",
+    basePower: 150,
+    effectivePower: 195,
+    party2Gain: "+44.3%",
   },
 ];
 
@@ -153,6 +162,18 @@ const tiers: Tier[] = [
             "Arceus (Fighting); Terrakion; Meloetta and Pirouette Meloetta; Silvally (Fighting); Hero Zamazenta; Kubfu; and Okidogi.",
           outright:
             "Regirock, Regice, and Registeel; Dialga and Origin Dialga; Regigigas; Darkrai and Mega Darkrai; Arceus (Normal, Dark, Ice, Rock, and Steel); Kyurem, Black Kyurem, and White Kyurem; Type: Null; Silvally (Normal, Dark, Ice, Rock, and Steel); Guzzlord; Stakataka; Meltan; Melmetal; Glastrier; Chien-Pao; Ting-Lu; Chi-Yu; and Terapagos.",
+        },
+      },
+      {
+        name: "Mega Staraptor",
+        projection: "Announced move",
+        rationale:
+          "Projected Brave Bird+ makes Staraptor simultaneously outright and catch-aligned against Virizion, Buzzwole, and Pheromosa, beating the best Mega Rayquaza-backed non-Mega strategy by 24.7%. It also becomes the Party-of-2 Flying type leader, adds three outright-only profiles, and has ten catch-aligned-only profiles.",
+        evidence: {
+          outrightAligned: "Virizion; Buzzwole; and Pheromosa.",
+          outright: "Mega Mewtwo X; Arceus (Bug); and Silvally (Bug).",
+          candyAligned:
+            "Galarian Zapdos; Sky Shaymin; Arceus (Fighting); Keldeo; Silvally (Fighting); Marshadow; Hero Zamazenta; Kubfu; Rapid Strike Urshifu; and Koraidon.",
         },
       },
       {
@@ -413,10 +434,8 @@ const tiers: Tier[] = [
       "Mega Blaziken",
       "Mega Chimecho",
       "Mega Metagross",
-      "Mega Staraptor",
       "Mega Emboar",
       "Mega Excadrill",
-      "Mega Hawlucha",
       "Mega Golisopod",
       "Mega Tatsugiri"
     ),
@@ -426,19 +445,26 @@ const tiers: Tier[] = [
     label: "E",
     principle:
       "No A–C− result, no higher-tier strict aura superset, and an exact coverage duplicate already ranks C− or higher.",
-    entries: simpleEntries(
-      "Mega Venusaur",
-      "Mega Slowbro",
-      "Mega Gyarados",
-      "Mega Sableye",
-      "Mega Mawile",
-      "Mega Medicham",
-      "Mega Sharpedo",
-      "Mega Garchomp",
-      "Mega Lucario",
-      "Mega Gallade",
-      "Mega Scolipede"
-    ),
+    entries: [
+      ...simpleEntries(
+        "Mega Venusaur",
+        "Mega Slowbro",
+        "Mega Gyarados",
+        "Mega Sableye",
+        "Mega Mawile",
+        "Mega Medicham",
+        "Mega Sharpedo",
+        "Mega Garchomp",
+        "Mega Lucario",
+        "Mega Gallade",
+        "Mega Scolipede"
+      ),
+      {
+        name: "Mega Hawlucha",
+        rationale:
+          "Its Fighting/Flying aura package exactly duplicates A-tier Mega Staraptor, so the exact-duplicate rule places Hawlucha in E.",
+      },
+    ],
   },
   {
     slug: "f",
@@ -505,7 +531,7 @@ if (tierEntries.length !== 95 || new Set(tierEntries.map((entry) => entry.name))
 >
   <article class="tool-page mega-tier-page">
     <header class="tool-page-header">
-      <p class="tool-kicker">Current ranking · Mega Level 4 · updated August 31, 2026</p>
+      <p class="tool-kicker">Current ranking · Mega Level 4 · updated September 2, 2026</p>
       <h1>Mega Tier List</h1>
       <p>
         A mechanical Mega and Primal ranking after the Super Max “+” attack update. Party-of-2 raid
@@ -668,10 +694,10 @@ if (tierEntries.length !== 95 || new Set(tierEntries.map((entry) => entry.name))
           <p class="eyebrow">Pending Game Master</p>
           <h2 id="move-impact-heading">Announced “+” attacks</h2>
         </div>
-        <span>2 announced</span>
+        <span>3 announced</span>
       </div>
       <p>
-        Only the two moves not yet present in the current Game Master are listed here. Party-of-2
+        Only moves not yet present in the current Game Master are listed here. Party-of-2
         gain compares the same level-52 Mega with and without the projected move before a teammate
         aura is applied. The percentage is a combat input, not a tier score.
       </p>
@@ -706,11 +732,15 @@ if (tierEntries.length !== 95 || new Set(tierEntries.map((entry) => entry.name))
           href={officialMegaSquads}
           target="_blank"
           rel="noreferrer">Mega Squads announcement</a
-        > gives Fell Stinger+ and Dark Pulse+ base powers of 140 and 150 for September 8. Their full
-        combat records are not active in the Game Master yet. The estimates use the ordinary move's
-        duration and 100 energy, matching the permanent “+” attacks already in the Game Master, and
-        will need rechecking when the records go live. Those permanent moves are calculation inputs,
-        so they are not repeated in this table.
+        > gives Fell Stinger+ and Dark Pulse+ base powers of 140 and 150 for September 8. The <a
+          href={officialMegaStaraptor}
+          target="_blank"
+          rel="noreferrer">Staraptor Super Mega Raid Day announcement</a
+        > gives Brave Bird+ a Raid power of 150 for September 19. Their full combat records are not
+        active in the Game Master yet. The estimates use each ordinary move's duration and 100
+        energy, matching the permanent “+” attacks already in the Game Master, and will need
+        rechecking when the records go live. Those permanent moves are calculation inputs, so they
+        are not repeated in this table.
       </p>
     </section>
 
