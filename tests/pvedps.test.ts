@@ -330,32 +330,56 @@ describe("pvedps", () => {
     expect(rows.some((row) => row.pokemon === "Dragonite")).toBe(false);
   });
 
-  it("models a single-weakness type benchmark without mixing in an explicit defender", () => {
+  it("uses both defender types, including resistance cancellation, for type comparisons", () => {
     const masterfile = createMasterfile();
-    const neutral = buildPvedpsRows(masterfile, {
-      mode: "raid",
-      attackTypeId: 16
-    }).find((row) => row.pokemon === "Dragonite" && row.form === "")!;
-    const benchmark = buildPvedpsRows(masterfile, {
+    masterfile.types["16"].weaknesses = [{ typeId: 16, typeName: "Dragon" }];
+    masterfile.types["16"].resistances = [{ typeId: 12, typeName: "Grass" }];
+    masterfile.types["3"] = type(3, "Flying");
+    masterfile.types["3"].resistances = [{ typeId: 12, typeName: "Grass" }];
+    masterfile.types["5"] = type(5, "Ground");
+    masterfile.types["5"].weaknesses = [{ typeId: 12, typeName: "Grass" }];
+    const dragonFlying = buildPvedpsRows(masterfile, {
       mode: "raid",
       attackTypeId: 16,
-      benchmarkAttackTypeId: 16
+      type1: "Dragon",
+      type2: "Flying"
     }).find((row) => row.pokemon === "Dragonite" && row.form === "")!;
+    const dragonGround = buildPvedpsRows(masterfile, {
+      mode: "raid",
+      attackTypeId: 16,
+      type1: "Dragon",
+      type2: "Ground"
+    }).find((row) => row.pokemon === "Dragonite" && row.form === "")!;
+    const grassFlying = buildPvedpsRows(masterfile, {
+      mode: "raid",
+      attackTypeId: 12,
+      type1: "Dragon",
+      type2: "Flying"
+    }).find((row) => row.pokemon === "Gymmon" && row.form === "")!;
+    const grassGround = buildPvedpsRows(masterfile, {
+      mode: "raid",
+      attackTypeId: 12,
+      type1: "Dragon",
+      type2: "Ground"
+    }).find((row) => row.pokemon === "Gymmon" && row.form === "")!;
 
-    expect(benchmark.dps / neutral.dps).toBeCloseTo(1.6);
-    expect(() =>
-      buildPvedpsRows(masterfile, {
-        attackTypeId: 16,
-        benchmarkAttackTypeId: 16,
-        type1: "Dragon"
-      })
-    ).toThrow("cannot be combined with explicit defender types");
+    expect(dragonFlying.dps).toBeCloseTo(dragonGround.dps);
+    expect(grassFlying.dps / grassGround.dps).toBeCloseTo(0.625 * 0.625);
   });
 
-  it("does not mistake neutral Psychic fast-move damage for Fairy leadership", () => {
+  it("reselects Fairy movesets for real Dragon and Fighting/Poison defenders", () => {
     const masterfile = createMasterfile();
     masterfile.types["14"] = type(14, "Psychic");
     masterfile.types["18"] = type(18, "Fairy");
+    masterfile.types["16"].weaknesses = [{ typeId: 18, typeName: "Fairy" }];
+    masterfile.types["2"] = type(2, "Fighting");
+    masterfile.types["2"].weaknesses = [
+      { typeId: 14, typeName: "Psychic" },
+      { typeId: 18, typeName: "Fairy" }
+    ];
+    masterfile.types["4"] = type(4, "Poison");
+    masterfile.types["4"].weaknesses = [{ typeId: 14, typeName: "Psychic" }];
+    masterfile.types["4"].resistances = [{ typeId: 18, typeName: "Fairy" }];
     masterfile.moves["104"] = move(104, "Confusion", 14, 19, 1500, 14, true);
     masterfile.moves["105"] = move(105, "Charm", 18, 20, 1500, 11, true);
     masterfile.moves["206"] = move(206, "Dazzling Gleam", 18, 100, 3500, -50, false);
@@ -380,19 +404,29 @@ describe("pvedps", () => {
     const findMega = (rows: ReturnType<typeof buildPvedpsRows>, name: string) =>
       rows.find((row) => row.pokemon === name && row.form === "Mega")!;
     const neutralRows = buildPvedpsRows(masterfile, { mode: "gym", attackTypeId: 18 });
-    const benchmarkRows = buildPvedpsRows(masterfile, {
+    const dragonRows = buildPvedpsRows(masterfile, {
       mode: "gym",
       attackTypeId: 18,
-      benchmarkAttackTypeId: 18
+      type1: "Dragon"
+    });
+    const fightingPoisonRows = buildPvedpsRows(masterfile, {
+      mode: "gym",
+      attackTypeId: 18,
+      type1: "Fighting",
+      type2: "Poison"
     });
 
     expect(findMega(neutralRows, "Alakazam").dps).toBeGreaterThan(
       findMega(neutralRows, "Gardevoir").dps
     );
-    expect(findMega(benchmarkRows, "Gardevoir").dps).toBeGreaterThan(
-      findMega(benchmarkRows, "Alakazam").dps
+    expect(findMega(dragonRows, "Gardevoir").dps).toBeGreaterThan(
+      findMega(dragonRows, "Alakazam").dps
     );
-    expect(findMega(benchmarkRows, "Gardevoir").quick).toBe(105);
+    expect(findMega(dragonRows, "Gardevoir").quick).toBe(105);
+    expect(findMega(fightingPoisonRows, "Alakazam").dps).toBeGreaterThan(
+      findMega(fightingPoisonRows, "Gardevoir").dps
+    );
+    expect(findMega(fightingPoisonRows, "Gardevoir").quick).toBe(104);
   });
 
   it("uses Primal weather and Mega Rayquaza coverage instead of only their own types", () => {

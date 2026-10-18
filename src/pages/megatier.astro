@@ -26,12 +26,15 @@ interface PlusMove {
   basePower: number;
   effectivePower: number;
   party2Gain: string;
+  availability: string;
+  status: "Game Master stats" | "Projected timing";
+  source: string;
 }
 
 const officialMegaUpdate = "https://pokemongo.com/news/more-mega-updates-2026";
-const officialMegaSquads = "https://pokemongo.com/en/news/mega-squads-2026";
-const officialMegaStaraptor =
-  "https://pokemongo.com/news/staraptor-super-mega-raid-day-2026";
+const officialMegaChandelure =
+  "https://pokemongo.com/en/news/chandelure-super-mega-raid-day-2026";
+const officialMegaSableye = "https://pokemongo.com/en/news/halloween-part-2-2026";
 const officialRaidPool = "https://pokemongo.com/news/road-of-legends-2026?hl=en";
 const officialMegaFinale = "https://pokemongo.com/gofest/megafinale";
 const officialHoopaRaid = "https://pokemongo.com/post/elite-raids-new-feature?hl=en";
@@ -43,30 +46,33 @@ const officialWeatherBoost =
   "https://niantic.helpshift.com/hc/en/6-pokemon-go/faq/53-what-are-weather-boosts/?f=weather-boosts&l=en";
 const gameMasterSource =
   "https://raw.githubusercontent.com/alexelgt/game_masters/refs/heads/master/GAME_MASTER.json";
+const masterfileSnapshot =
+  "https://raw.githubusercontent.com/WatWowMap/Masterfile-Generator/ae1b4362405f1f9706ad4d775d59ffaa242d590c/master-latest-rotomata.json";
+const futureMoveNames =
+  "https://github.com/sora10pls/holoholo-text/blob/78ab00161e5f440083bf3e70188c118a6ad59e1b/Remote/English/en-us_raw.json";
 const visualTierList =
   "https://tiermaker.com/list/pokemon/pokemon-mega-evolutions-18840649/6575691";
 
 const plusMoves: PlusMove[] = [
   {
-    pokemon: "Mega Beedrill",
-    move: "Fell Stinger+",
-    basePower: 140,
-    effectivePower: 182,
-    party2Gain: "+106.9%",
+    pokemon: "Mega Chandelure",
+    move: "Ominous Wind+",
+    basePower: 145,
+    effectivePower: 188.5,
+    party2Gain: "+38.9%",
+    availability: "Announced for October 31",
+    status: "Game Master stats",
+    source: officialMegaChandelure,
   },
   {
-    pokemon: "Mega Houndoom",
-    move: "Dark Pulse+",
-    basePower: 150,
-    effectivePower: 195,
-    party2Gain: "+55.9%",
-  },
-  {
-    pokemon: "Mega Staraptor",
-    move: "Brave Bird+",
-    basePower: 150,
-    effectivePower: 195,
-    party2Gain: "+44.3%",
+    pokemon: "Mega Sableye",
+    move: "Night Shade+",
+    basePower: 160,
+    effectivePower: 208,
+    party2Gain: "+60.8%",
+    availability: "Announced for November 1",
+    status: "Projected timing",
+    source: officialMegaSableye,
   },
 ];
 
@@ -78,7 +84,6 @@ const unreleasedMegas = new Set([
   "Mega Feraligatr",
   "Mega Chimecho",
   "Mega Absol Z",
-  "Mega Staraptor",
   "Mega Garchomp Z",
   "Mega Lucario Z",
   "Mega Froslass",
@@ -124,7 +129,7 @@ const tiers: Tier[] = [
       {
         name: "Mega Victreebel",
         rationale:
-          "Acid and Acid Spray+ both receive 1.3× against Tapu Bulu. Victreebel is simultaneously the outright and catch-aligned leader there, beating the best background strategy—Crowned Sword Zacian supported by Primal Kyogre—by 33.7%.",
+          "Acid and Acid Spray+ both receive 1.3× against Tapu Bulu. Victreebel is simultaneously the outright and catch-aligned leader there, beating the best background strategy—Crowned Sword Zacian supported by Primal Kyogre—by 46.8%.",
         evidence: {
           outrightAligned: "Tapu Bulu.",
         },
@@ -154,26 +159,35 @@ const tiers: Tier[] = [
       {
         name: "Mega Mewtwo X",
         rationale:
-          "Mewtwo X has three outright-and-aligned profiles, beating the best background strategy by 22.9% to 47.3%. It adds eight catch-only leadership profiles at 10.2% to 55.0% and 31 outright profiles at 15.1% to 86.7%; Dynamic Punch+ handles most Fighting offense while Psystrike supplies the aligned Psychic cases.",
+          "Mewtwo X has three outright-and-aligned profiles, beating the best background strategy by 22.9% to 47.3%. It adds four catch-only leadership profiles at 1.0% to 42.1% and 31 outright profiles at 15.1% to 86.7%; Dynamic Punch+ handles most Fighting offense while Psystrike supplies the aligned Psychic cases.",
         evidence: {
           outrightAligned:
             "Cobalion; Crowned Shield Zamazenta; and Single Strike Urshifu.",
           candyAligned:
-            "Arceus (Fighting); Terrakion; Meloetta and Pirouette Meloetta; Silvally (Fighting); Hero Zamazenta; Kubfu; and Okidogi.",
+            "Terrakion; Meloetta and Pirouette Meloetta; and Okidogi.",
           outright:
             "Regirock, Regice, and Registeel; Dialga and Origin Dialga; Regigigas; Darkrai and Mega Darkrai; Arceus (Normal, Dark, Ice, Rock, and Steel); Kyurem, Black Kyurem, and White Kyurem; Type: Null; Silvally (Normal, Dark, Ice, Rock, and Steel); Guzzlord; Stakataka; Meltan; Melmetal; Glastrier; Chien-Pao; Ting-Lu; Chi-Yu; and Terapagos.",
         },
       },
       {
         name: "Mega Staraptor",
-        projection: "Announced move",
         rationale:
-          "Projected Brave Bird+ makes Staraptor simultaneously outright and catch-aligned against Virizion, Buzzwole, and Pheromosa, beating the best Mega Rayquaza-backed non-Mega strategy by 24.7%. It also becomes the Party-of-2 Flying type leader, adds three outright-only profiles, and has ten catch-aligned-only profiles.",
+          "Brave Bird+ makes Staraptor simultaneously outright and catch-aligned against Virizion, Buzzwole, and Pheromosa, beating the best Mega Rayquaza-backed non-Mega strategy by 24.7%. It also becomes the Party-of-2 Flying type leader, adds three outright-only profiles, and has ten catch-aligned-only profiles.",
         evidence: {
           outrightAligned: "Virizion; Buzzwole; and Pheromosa.",
           outright: "Mega Mewtwo X; Arceus (Bug); and Silvally (Bug).",
           candyAligned:
             "Galarian Zapdos; Sky Shaymin; Arceus (Fighting); Keldeo; Silvally (Fighting); Marshadow; Hero Zamazenta; Kubfu; Rapid Strike Urshifu; and Koraidon.",
+        },
+      },
+      {
+        name: "Mega Chandelure",
+        rationale:
+          "Ominous Wind+ is announced for October 31 and already has Game Master combat stats. Hex and Ominous Wind+ make Chandelure the Party-of-2 Ghost type leader, with six simultaneous outright and catch-aligned profiles at 3.7% to 9.9% over the best background strategy. It also wins outright against Tapu Lele and Dawn Wings Necrozma; the latter encounter awards ordinary Necrozma, so it is not catch-aligned.",
+        evidence: {
+          outrightAligned:
+            "Arceus (Ghost); Hoopa; Silvally (Ghost); Lunala; Spectrier; and Shadow Rider Calyrex.",
+          outright: "Tapu Lele; and Dawn Wings Necrozma.",
         },
       },
       {
@@ -208,22 +222,22 @@ const tiers: Tier[] = [
       {
         name: "Mega Mewtwo Y",
         rationale:
-          "Without weather, Future Sight+ gives Mewtwo Y 25 outright wins but no catch-aligned lead. Windy makes it both outright and catch-aligned for Mega Mewtwo X and Munkidori by 7.9% to 14.5%, so the weather-conditional combined rule places it in A-.",
+          "Without weather, Future Sight+ gives Mewtwo Y 22 outright wins but no catch-aligned lead. Windy makes it both outright and catch-aligned for Munkidori by 7.9%, satisfying A-. It also gains a windy catch-aligned lead for Mega Mewtwo X by 14.5%, where Chandelure remains outright.",
         evidence: {
           outright:
-            "Zapdos and Galarian Zapdos; Arceus (Fighting and Poison); Terrakion; Virizion; Incarnate and Therian Thundurus; Keldeo; Pirouette Meloetta; Silvally (Fighting and Poison); Buzzwole; Pheromosa; Marshadow; Poipole; Naganadel; Hero Zamazenta; Eternatus; Kubfu; Rapid Strike Urshifu; Koraidon; Okidogi; Fezandipiti; and Pecharunt.",
+            "Zapdos and Galarian Zapdos; Arceus (Fighting and Poison); Terrakion; Incarnate and Therian Thundurus; Keldeo; Pirouette Meloetta; Silvally (Fighting and Poison); Marshadow; Poipole; Naganadel; Hero Zamazenta; Eternatus; Kubfu; Rapid Strike Urshifu; Koraidon; Okidogi; Fezandipiti; and Pecharunt.",
           conditional:
-            "Windy — Mega Mewtwo X and Munkidori become outright + catch-aligned (+7.9% to +14.5%).",
+            "Windy — Munkidori becomes outright + catch-aligned (+7.9%); Mega Mewtwo X becomes catch-aligned only (+14.5%).",
         },
       },
       {
         name: "Mega Delphox",
         rationale:
-          "Without weather, Delphox is catch-aligned for Ice Rider Calyrex and outright on eight separate Bug profiles. Clear/Sunny makes the Ice Rider Calyrex result outright as well as catch-aligned by 13.4%, satisfying A- but not the no-weather A rule.",
+          "Without weather, Delphox is catch-aligned for Ice Rider Calyrex and outright on six separate Bug profiles. Clear/Sunny makes the Ice Rider Calyrex result outright as well as catch-aligned by 13.4%, satisfying A- but not the no-weather A rule.",
         evidence: {
           candyAligned: "Ice Rider Calyrex.",
           outright:
-            "Arceus (Bug); Genesect with no Drive, Burn Drive, Chill Drive, Douse Drive, or Shock Drive; Silvally (Bug); and Kartana.",
+            "Genesect with no Drive, Burn Drive, Chill Drive, Douse Drive, or Shock Drive; and Kartana.",
           conditional:
             "Clear / Sunny — Ice Rider Calyrex becomes outright + catch-aligned (+13.4%).",
         },
@@ -296,22 +310,11 @@ const tiers: Tier[] = [
     entries: [
       {
         name: "Mega Beedrill",
-        projection: "Announced move",
         rationale:
-          "Projected Fell Stinger+ gives Beedrill 34 no-weather outright wins by 12.8% to 71.2% over the best background-supported non-Mega strategy. None is catch-aligned, and no weather creates a catch-aligned result, so it lands in B-.",
+          "Fell Stinger+ gives Beedrill 34 no-weather outright wins by 12.8% to 71.2% over the best background-supported non-Mega strategy. None is catch-aligned, and no weather creates a catch-aligned result, so it lands in B-.",
         evidence: {
           outright:
             "Mega Mewtwo Y; Mewtwo; Mew; Celebi; Latias and Mega Latias; Latios and Mega Latios; all four Deoxys formes; Uxie; Mesprit; Azelf; Cresselia; Shaymin; Arceus (Grass and Psychic); Meloetta; Hoopa Unbound; Silvally (Grass and Psychic); Cosmog; Cosmoem; Necrozma and Ultra Necrozma; Zarude; Calyrex and Ice Rider Calyrex; Wo-Chien; Iron Leaves; Ogerpon; and Iron Boulder.",
-        },
-      },
-      {
-        name: "Mega Houndoom",
-        projection: "Announced move",
-        rationale:
-          "With projected Dark Pulse+, Houndoom is only 0.09% behind Dawn Wings Necrozma supported by backline Mega Rayquaza against Hoopa, Lunala, Dawn Wings Necrozma, and Shadow Rider Calyrex. Those four scenario-dependent no-weather co-leads satisfy B-; none is catch-aligned.",
-        evidence: {
-          outright:
-            "Hoopa; Lunala; Necrozma (Dawn Wings); and Calyrex (Shadow Rider), each 0.09% behind the nominal background leader.",
         },
       },
     ],
@@ -325,7 +328,7 @@ const tiers: Tier[] = [
       {
         name: "Mega Glimmora",
         rationale:
-          "Glimmora is the no-weather Party-of-2 Rock type leader but has no qualifying boss win. Partly Cloudy makes it outright for Articuno, Moltres, and Ho-Oh by 12.1%; none is catch-aligned, so it meets conditional C+.",
+          "Glimmora wins the no-weather Party-of-2 Rock preset against Bug/Fire by 6.3% over Mega Starmie, but has no qualifying boss win. Partly Cloudy makes it outright for Articuno, Moltres, and Ho-Oh by 12.1%; none is catch-aligned, so it meets conditional C+.",
         evidence: {
           conditional:
             "Partly Cloudy — outright for Articuno, Moltres, and Ho-Oh (+12.1%).",
@@ -337,50 +340,44 @@ const tiers: Tier[] = [
     slug: "c",
     label: "C",
     principle:
-      "No qualifying boss result in baseline or weather, but the candidate is within 1% of the fastest full-pool Party-of-2 strategy against a synthetic target weak only to a Charged Attack type covered by its own aura.",
-    entries: [
-      {
-        name: "Mega Magearna",
-        rationale:
-          "Magearna is the full-pool Party-of-2 Fairy leader, 1.4% ahead of runner-up Mega Diancie, but it does not gain a qualifying boss result in any audited weather.",
-      },
-    ],
+      "No qualifying boss result in baseline or weather, but the candidate is within 1% of the fastest full-pool Party-of-2 strategy for an observed defender typing, using a super-effective Charged Attack covered by its own aura.",
+    entries: [],
   },
   {
     slug: "c-minus",
     label: "C-",
     principle:
-      "No qualifying boss or Party-of-2 type lead, but the candidate is within 1% of the fastest full-pool Gym attacker for at least one super-effective Charged Attack type covered by its own aura.",
+      "No qualifying boss or Party-of-2 type-matchup lead, but the candidate is within 1% of the fastest full-pool Gym attacker for an observed defender typing, using a super-effective Charged Attack covered by its own aura.",
     entries: [
       {
         name: "Mega Gengar",
         rationale:
-          "Gengar is the full-pool Gym Ghost leader, 7.6% ahead of runner-up Mega Chandelure. It does not win a modeled raid-boss matchup.",
+          "Gengar wins the shared Dark/Ghost Gym preset against Ghost/Psychic by 1.3% over Mega Absol Z. It does not win a modeled raid-boss matchup.",
       },
       {
         name: "Mega Sceptile",
         rationale:
-          "Sceptile is the full-pool Gym Grass leader, 6.6% ahead of runner-up Mega Meganium.",
+          "Sceptile wins the Gym Grass presets against Ground/Water and Rock/Water by 6.1% over Mega Meganium.",
       },
       {
         name: "Mega Gardevoir",
         rationale:
-          "Gardevoir is the nominal full-pool Gym Fairy leader, with Mega Magearna only 0.8% behind and therefore a co-leader under the 1% rule. The previous Alakazam comparison was a neutral-target audit artifact that overcounted Psychic fast-move damage.",
+          "Gardevoir wins the Gym Fairy presets against Fighting/Dragon, Fighting/Dark, and Dragon/Dark by 2.7% over Mega Magearna.",
       },
       {
         name: "Mega Absol Z",
         rationale:
-          "Absol Z is the full-pool Gym Dark leader, 5.5% ahead of runner-up Mega Absol.",
+          "Absol Z wins the Gym Dark preset against Normal/Ghost by 4.0% over Shadow Darkrai.",
       },
       {
         name: "Mega Zygarde",
         rationale:
-          "Zygarde is the full-pool Gym Dragon leader, 3.0% ahead of runner-up Eternatus. Shadow Therian Landorus remains faster for Ground damage.",
+          "Zygarde wins the Gym comparison against Water/Dragon, such as Kingdra, using Dragon Tail and Outrage: 3.0% ahead of Eternatus. Against Fire/Dragon, Dragon Tail and Earthquake lead by 5.2% over Eternatus.",
       },
       {
         name: "Mega Zeraora",
         rationale:
-          "Zeraora is the full-pool Gym Electric leader, 9.9% ahead of Shadow Therian Thundurus; Raichu Y takes the Party-of-2 Electric lead.",
+          "Zeraora wins the Gym Electric preset against Water/Flying by 9.9% over Shadow Therian Thundurus; Raichu Y takes the Party-of-2 lead on that preset.",
       },
     ],
   },
@@ -399,18 +396,22 @@ const tiers: Tier[] = [
         "Mega Aerodactyl",
         "Mega Ampharos",
         "Mega Heracross",
-        "Mega Skarmory",
-        "Mega Tyranitar",
-        "Mega Swampert"
+        "Mega Skarmory"
       ),
+      {
+        name: "Mega Houndoom",
+        rationale:
+          "Mega Mewtwo Y beats Houndoom by 3.1% on the Party-of-2 Dark preset against Normal/Ghost, and Chandelure wins the shared Dark/Ghost preset against Ghost/Psychic. Houndoom has no qualifying boss result in any audited weather, but its unique Fire/Dark aura keeps it in D+.",
+      },
       ...simpleEntries(
+        "Mega Tyranitar",
+        "Mega Swampert",
         "Mega Altaria",
         "Mega Abomasnow",
         "Mega Froslass",
         "Mega Heatran",
         "Mega Audino",
         "Mega Scrafty",
-        "Mega Chandelure",
         "Mega Golurk",
         "Mega Pyroar",
         "Mega Malamar",
@@ -427,18 +428,26 @@ const tiers: Tier[] = [
     label: "D",
     principle:
       "No A–C− result and the exact multi-type package is duplicated, but no exact duplicate ranks C− or higher; every such duplicate stays in D.",
-    entries: simpleEntries(
-      "Mega Feraligatr",
-      "Mega Steelix",
-      "Mega Scizor",
-      "Mega Blaziken",
-      "Mega Chimecho",
-      "Mega Metagross",
-      "Mega Emboar",
-      "Mega Excadrill",
-      "Mega Golisopod",
-      "Mega Tatsugiri"
-    ),
+    entries: [
+      ...simpleEntries(
+        "Mega Feraligatr",
+        "Mega Steelix",
+        "Mega Scizor",
+        "Mega Blaziken",
+        "Mega Mawile",
+        "Mega Chimecho",
+        "Mega Metagross",
+        "Mega Emboar",
+        "Mega Excadrill",
+        "Mega Golisopod"
+      ),
+      {
+        name: "Mega Magearna",
+        rationale:
+          "Magearna has no qualifying Party-of-2 or Gym lead across the 162 defender typings. Mega Gardevoir beats it by 2.7% in Gym against Fighting/Dragon, Fighting/Dark, and Dragon/Dark. Its Steel/Fairy aura duplicates Mega Mawile; neither reaches C−, so both rank D.",
+      },
+      ...simpleEntries("Mega Tatsugiri"),
+    ],
   },
   {
     slug: "e",
@@ -449,9 +458,15 @@ const tiers: Tier[] = [
       ...simpleEntries(
         "Mega Venusaur",
         "Mega Slowbro",
-        "Mega Gyarados",
-        "Mega Sableye",
-        "Mega Mawile",
+        "Mega Gyarados"
+      ),
+      {
+        name: "Mega Sableye",
+        projection: "Announced move",
+        rationale:
+          "Night Shade+ is announced for November 1 with 160 Raid power. Assuming 100 energy and ordinary Night Shade's 2.5-second duration, its projected Party-of-2 DPS against Lunala (Ghost/Psychic) rises 60.8%, accounting for its existing Dark moves as well. It has no qualifying boss lead in baseline or weather. Its Ghost/Dark aura duplicates higher-tier Mega Absol Z, leaving it in E.",
+      },
+      ...simpleEntries(
         "Mega Medicham",
         "Mega Sharpedo",
         "Mega Garchomp",
@@ -477,8 +492,14 @@ const tiers: Tier[] = [
         "Mega Raichu X",
         "Mega Alakazam",
         "Mega Kangaskhan",
-        "Mega Aggron",
-        "Mega Manectric",
+        "Mega Aggron"
+      ),
+      {
+        name: "Mega Manectric",
+        rationale:
+          "Discharge+ has Game Master stats of 150 base power, 100 energy, and a 2.5-second duration, reaching 195 power at Mega Level 4. Manectric has no qualifying result across 188 modeled boss profiles, seven weather conditions, or the expanded presets. Its monotype Electric coverage keeps it in F.",
+      },
+      ...simpleEntries(
         "Mega Camerupt",
         "Mega Banette",
         "Mega Absol",
@@ -531,7 +552,7 @@ if (tierEntries.length !== 95 || new Set(tierEntries.map((entry) => entry.name))
 >
   <article class="tool-page mega-tier-page">
     <header class="tool-page-header">
-      <p class="tool-kicker">Current ranking · Mega Level 4 · updated September 2, 2026</p>
+      <p class="tool-kicker">Current ranking · Mega Level 4 · updated October 18, 2026</p>
       <h1>Mega Tier List</h1>
       <p>
         A mechanical Mega and Primal ranking after the Super Max “+” attack update. Party-of-2 raid
@@ -604,16 +625,20 @@ if (tierEntries.length !== 95 || new Set(tierEntries.map((entry) => entry.name))
         </li>
         <li>
           With no qualifying boss result, C requires a strategy within 1% of the fastest Party-of-2
-          result against a synthetic target weak only to a Charged Attack type included in the
-          candidate's own aura. The audited type is 1.6× effective and every other attack type is
-          neutral. Normal is excluded because it cannot deal super-effective damage. This comparison
+          result for an expanded preset. These cover all 162 single or dual defender typings
+          present in the masterfile, including typings with several ordinary weaknesses.
+          Every weakness and resistance applies, and all attackers choose their best moveset.
+          A Mega qualifies when its selected Charged Attack is super effective against the
+          defender and covered by its own aura. All attack types compete in the same comparison;
+          Dark and Ghost therefore compete together against Ghost/Psychic. Normal attacks are
+          excluded because they cannot be super effective. This comparison
           includes every mutually boosted active Mega or Primal and the best repeatable non-Mega
           under each of the three backline auras; there is no Mega-only leaderboard.
         </li>
         <li>
           C− applies the same 1% full-pool rule to Gym damage, comparing every Mega, Primal, and
-          non-Mega attacker without a teammate aura. Normal remains excluded, and additional “+”
-          attacks are unavailable in Gym mode.
+          non-Mega attacker without a teammate aura against those same targets. Normal
+          attacks remain excluded, and additional “+” attacks are unavailable in Gym mode.
         </li>
         <li>
           The remaining coverage rules are also exact. F first takes monotypes and every package
@@ -678,9 +703,12 @@ if (tierEntries.length !== 95 || new Set(tierEntries.map((entry) => entry.name))
           rel="noreferrer">Road of Legends</a
         >, the <a href={officialMegaFinale} target="_blank" rel="noreferrer">Mega Finale</a>, and the
         <a href={officialHoopaRaid} target="_blank" rel="noreferrer">Hoopa Unbound Elite Raid</a>.
-        Every other Game Master target is visibly treated as a foreseeable assumption. Within
+        Every other Game Master target is visibly treated as a foreseeable assumption. This
+        October 18 audit uses the <a href={masterfileSnapshot} target="_blank" rel="noreferrer"
+          >October 16 masterfile snapshot</a
+        > and the announced Night Shade+ projection. Within
         each tier, entries are ordered by National Pokedex number rather than strength. Run <code
-          >npm run audit:megatier</code
+          >npm run audit:megatier -- --masterfile /path/to/master-latest-rotomata.json</code
           > to regenerate the target pool, background comparisons, full-pool type leaders,
         mechanical tiers, and per-boss evidence whenever the Game Master changes. Add <code
           >--weather cloudy</code
@@ -691,15 +719,16 @@ if (tierEntries.length !== 95 || new Set(tierEntries.map((entry) => entry.name))
     <section class="result-panel move-impact" aria-labelledby="move-impact-heading">
       <div class="section-heading-row">
         <div>
-          <p class="eyebrow">Pending Game Master</p>
+          <p class="eyebrow">Upcoming updates</p>
           <h2 id="move-impact-heading">Announced “+” attacks</h2>
         </div>
-        <span>3 announced</span>
+        <span>1 with full stats · 1 timing projection</span>
       </div>
       <p>
-        Only moves not yet present in the current Game Master are listed here. Party-of-2
-        gain compares the same level-52 Mega with and without the projected move before a teammate
-        aura is applied. The percentage is a combat input, not a tier score.
+        Party-of-2 gain uses the calculator's Dark/Ghost weakness preset against Lunala
+        (Ghost/Psychic). It compares the same level-52 Mega with and without the additional move,
+        before a teammate aura is applied, choosing its best moveset on each side. The percentage
+        is a combat input, not a tier score.
       </p>
       <div class="table-wrap">
         <table>
@@ -709,14 +738,18 @@ if (tierEntries.length !== 95 || new Set(tierEntries.map((entry) => entry.name))
               <th>Additional attack</th>
               <th>Base power</th>
               <th>Level 4 power</th>
-              <th>Party 2 gain</th>
+              <th>Party 2 gain vs. Ghost/Psychic</th>
             </tr>
           </thead>
           <tbody>
             {
               plusMoves.map((move) => (
                 <tr>
-                  <th scope="row">{move.pokemon}</th>
+                  <th scope="row">
+                    <a href={move.source} target="_blank" rel="noreferrer">{move.pokemon}</a>
+                    <span class="move-availability">{move.availability}</span>
+                    <span class="move-availability">{move.status}</span>
+                  </th>
                   <td>{move.move}</td>
                   <td>{move.basePower}</td>
                   <td>{move.effectivePower}</td>
@@ -728,19 +761,93 @@ if (tierEntries.length !== 95 || new Set(tierEntries.map((entry) => entry.name))
         </table>
       </div>
       <p class="projection-note">
-        <strong>Announced projection:</strong> The <a
-          href={officialMegaSquads}
+        <strong>Confirmed combat record:</strong> The <a
+          href={gameMasterSource}
           target="_blank"
-          rel="noreferrer">Mega Squads announcement</a
-        > gives Fell Stinger+ and Dark Pulse+ base powers of 140 and 150 for September 8. The <a
-          href={officialMegaStaraptor}
+          rel="noreferrer">Game Master</a
+        > confirms Ominous Wind+ at 145 power, 100 energy, and 2.5 seconds,
+        despite its <a href={officialMegaChandelure} target="_blank" rel="noreferrer"
+          >October 31 debut</a
+        > being upcoming.
+      </p>
+      <p class="projection-note">
+        <strong>Announced projection:</strong> <a
+          href={officialMegaSableye}
           target="_blank"
-          rel="noreferrer">Staraptor Super Mega Raid Day announcement</a
-        > gives Brave Bird+ a Raid power of 150 for September 19. Their full combat records are not
-        active in the Game Master yet. The estimates use each ordinary move's duration and 100
-        energy, matching the permanent “+” attacks already in the Game Master, and will need
-        rechecking when the records go live. Those permanent moves are calculation inputs, so they
-        are not repeated in this table.
+          rel="noreferrer">Night Shade+ is announced for November 1</a
+        > with 160 Raid power. Its energy, duration, and attachment are absent from the Game
+        Master checked October 18. The Sableye calculation assumes 100 energy and ordinary Night
+        Shade's 2.5-second duration; the power comes from the official announcement.
+      </p>
+      <p class="projection-note">
+        <strong>Temporary Chandelure bonuses:</strong> Its <a
+          href={officialMegaChandelure}
+          target="_blank"
+          rel="noreferrer">Global Challenge</a
+        > can increase Ominous Wind+ power and Super Max CP from November 2 to 15. The amounts
+        depend on challenge results, so this ranking uses its permanent stats.
+      </p>
+    </section>
+
+    <section class="result-panel futureproof-note" aria-labelledby="futureproof-heading">
+      <h2 id="futureproof-heading">Futureproofing: resilient catch-aligned matchups</h2>
+      <p>
+        Catch-aligned leadership can survive stronger future “+” attacks when those attackers
+        cannot boost the caught Pokemon's candy. The strongest protected cases identified in the
+        October 18 audit are below. These are matchup-specific projections, not guarantees that a
+        Mega will always lead outright.
+      </p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Mega</th>
+              <th>Catch-aligned matchup</th>
+              <th>Nearest pending rival</th>
+              <th>Rival base power to overtake</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <th scope="row">Mega Mewtwo X</th>
+              <td>Okidogi</td>
+              <td>Mega Gengar — Shadow Ball+</td>
+              <td>~317</td>
+            </tr>
+            <tr>
+              <th scope="row">Mega Victreebel</th>
+              <td>Tapu Bulu</td>
+              <td>Mega Scovillain — Flamethrower+</td>
+              <td>~283</td>
+            </tr>
+            <tr>
+              <th scope="row">Mega Staraptor</th>
+              <td>Virizion</td>
+              <td>Mega Blaziken — Blaze Kick+</td>
+              <td>~240; ~190 in sunny weather</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="projection-note">
+        <strong>Staraptor's protection is specific to Virizion.</strong> Rayquaza and Pinsir cannot
+        boost Virizion's Grass/Fighting catch types. Pinsir can boost Bug candy for Buzzwole and
+        Pheromosa, where Aerial Ace+ could overtake Staraptor at about 138 power. Gallade's Sacred
+        Sword+ could take Fighting-aligned leads such as Keldeo at about 158 power. Neither move's
+        combat stats are known yet.
+      </p>
+      <p class="projection-note">
+        <strong>Projection assumptions:</strong> These comparisons use the same level-52,
+        mutually boosted Party-of-2 model and 95-Mega/Primal, 188-boss pool described above.
+        Pending moves use 100 energy, the ordinary move type and duration referenced by the
+        <a href={futureMoveNames} target="_blank" rel="noreferrer">datamined move names</a>, and
+        the 1.3× Mega Level 4 power multiplier. No weather applies unless stated. The thresholds
+        change the nominal DPS winner; the tiers still allow 1% ties. All three protected cases
+        retained their catch-aligned lead across every weather when the remaining identified
+        unknown-power moves were assigned 185 power. That is a sensitivity check, not a cap on
+        future power. Unknown timing, energy, and unidentified moves can change these results.
+        Lopunny's Normal catch niche also looks promising, but Kangaskhan's future move remains
+        unidentified.
       </p>
     </section>
 
@@ -764,6 +871,7 @@ if (tierEntries.length !== 95 || new Set(tierEntries.map((entry) => entry.name))
                 {tier.principle && <p>{tier.principle}</p>}
               </div>
             </div>
+            {tier.entries.length === 0 && <p>No Pokemon currently qualify.</p>}
             <ul class="tier-members">
               {tier.entries.map((entry) => (
                 <li
@@ -854,7 +962,8 @@ if (tierEntries.length !== 95 || new Set(tierEntries.map((entry) => entry.name))
   }
 
   .methodology p,
-  .move-impact > p {
+  .move-impact > p,
+  .futureproof-note > p {
     margin-bottom: 0;
     color: var(--muted);
     line-height: 1.55;
@@ -875,7 +984,8 @@ if (tierEntries.length !== 95 || new Set(tierEntries.map((entry) => entry.name))
   }
 
   .methodology a,
-  .move-impact a {
+  .move-impact a,
+  .futureproof-note a {
     color: var(--signal-hot);
     font-weight: 600;
   }
@@ -946,6 +1056,14 @@ if (tierEntries.length !== 95 || new Set(tierEntries.map((entry) => entry.name))
   tbody th {
     color: var(--ink);
     font-weight: 650;
+  }
+
+  .move-availability {
+    display: block;
+    margin-top: 0.2rem;
+    color: var(--muted);
+    font-size: 0.78rem;
+    font-weight: 400;
   }
 
   .projection-badge {

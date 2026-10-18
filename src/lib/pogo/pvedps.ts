@@ -2,7 +2,8 @@ import { calculateCP, calculateCpMultiplier } from "./parity";
 import {
   listDoubleWeaknessPresets,
   listPvpdpsTypeNames,
-  type DoubleWeaknessPreset
+  type DoubleWeaknessPreset,
+  type WeaknessPresetOptions
 } from "./pvpdps";
 import type {
   Masterfile,
@@ -152,8 +153,6 @@ export interface PvedpsInput {
   weather?: PvedpsWeather;
   /** Restrict ranking rows to movesets whose Charged Attack has this type. */
   attackTypeId?: number;
-  /** Model a synthetic defender that is weak only to this attack type. */
-  benchmarkAttackTypeId?: number;
   /** Model a second Trainer using the same Mega/Primal and boosting this one's attacks. */
   megaTeammateBoost?: boolean;
   /** Apply one teammate's explicit Mega/Primal aura to every modeled attacker. */
@@ -166,7 +165,6 @@ interface ResolvedPvedpsInput {
   type2: string;
   weatherBoostedTypeIds?: ReadonlySet<number>;
   attackTypeId?: number;
-  benchmarkAttackTypeId?: number;
   megaTeammateBoost: boolean;
   teammateAuraTypes?: ReadonlySet<number>;
 }
@@ -225,11 +223,14 @@ export function listPvedpsTypeNames(masterfile: Masterfile): string[] {
   return listPvpdpsTypeNames(masterfile);
 }
 
-export function listPvedpsWeaknessPresets(masterfile: Masterfile): DoubleWeaknessPreset[] {
-  return listDoubleWeaknessPresets(masterfile);
+export function listPvedpsWeaknessPresets(
+  masterfile: Masterfile,
+  options: WeaknessPresetOptions = {}
+): DoubleWeaknessPreset[] {
+  return listDoubleWeaknessPresets(masterfile, options);
 }
 
-export type { DoubleWeaknessPreset };
+export type { DoubleWeaknessPreset, WeaknessPresetOptions };
 
 function resolveMoveTypeId(move: MasterfileMove | undefined): number {
   if (typeof move?.type === "number") {
@@ -367,9 +368,6 @@ function resolveResistanceMaps(
   masterfile: Masterfile,
   input: ResolvedPvedpsInput
 ): [ResistanceMap, ResistanceMap] {
-  if (input.benchmarkAttackTypeId !== undefined) {
-    return [{ [input.benchmarkAttackTypeId]: 1.6 }, {}];
-  }
   return [
     resolveTypeMultipliers(masterfile.types, input.type1),
     resolveTypeMultipliers(masterfile.types, input.type2)
@@ -803,22 +801,12 @@ export function buildPvedpsRows(masterfile: Masterfile, input: PvedpsInput = {})
   if (input.megaTeammateBoost && teammateAuraTypeIds.length) {
     throw new Error("megaTeammateBoost and teammateAuraTypeIds model different strategies");
   }
-  if (
-    input.benchmarkAttackTypeId !== undefined &&
-    [input.type1, input.type2].some((typeName) => {
-      const lookup = typeName?.trim();
-      return Boolean(lookup && lookup !== "None");
-    })
-  ) {
-    throw new Error("benchmarkAttackTypeId cannot be combined with explicit defender types");
-  }
   const resolvedInput: ResolvedPvedpsInput = {
     mode: input.mode ?? "party2",
     type1: input.type1 ?? "None",
     type2: input.type2 ?? "None",
     weatherBoostedTypeIds: weather.typeIds.length ? new Set(weather.typeIds) : undefined,
     attackTypeId: input.attackTypeId,
-    benchmarkAttackTypeId: input.benchmarkAttackTypeId,
     megaTeammateBoost: input.megaTeammateBoost ?? false,
     teammateAuraTypes: teammateAuraTypeIds.length ? new Set(teammateAuraTypeIds) : undefined
   };

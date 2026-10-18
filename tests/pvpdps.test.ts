@@ -58,6 +58,9 @@ function createPokemon(
 const TYPE_NAMES: Record<number, string> = {
   1: "Normal",
   2: "Fighting",
+  3: "Flying",
+  4: "Poison",
+  5: "Ground",
   6: "Rock",
   7: "Bug",
   8: "Ghost",
@@ -67,6 +70,8 @@ const TYPE_NAMES: Record<number, string> = {
   12: "Grass",
   13: "Electric",
   14: "Psychic",
+  15: "Ice",
+  16: "Dragon",
   17: "Dark",
   18: "Fairy"
 };
@@ -283,6 +288,71 @@ describe("pvpdps", () => {
     expect(labels).not.toContain("Dark -> Ghost+Psychic (1)");
     expect(labels).not.toContain("Ground -> Rock+Steel (1)");
     expect(labels).not.toContain("Fighting -> Rock+Steel (1)");
+    expect(presets.find((preset) => preset.attackingType === "Dark+Ghost")?.attackingTypeIds)
+      .toEqual([17, 8]);
+    expect(presets.find((preset) => preset.value === "Ground:13")?.attackingTypeIds)
+      .toEqual([5]);
+  });
+
+  it("expands presets to observed typings with shared weaknesses and resistance cancellation", () => {
+    const masterfile = createBaseMasterfile({
+      "1": {
+        ...createPokemon("WaterDragonmon", 1, [11, 16], [], [], 100, 100, 100),
+        forms: {
+          "1": { types: { "3": { typeId: 3, typeName: "Flying" }, "5": { typeId: 5, typeName: "Ground" } } }
+        },
+        tempEvolutions: {
+          "1": { types: { "16": { typeId: 16, typeName: "Dragon" }, "11": { typeId: 11, typeName: "Water" } } }
+        }
+      },
+      "2": createPokemon("Darkmon", 2, [17], [], [], 100, 100, 100),
+      "3": createPokemon("DarkFairymon", 3, [17, 18], [], [], 100, 100, 100),
+      "4": createPokemon("GhostPsychicmon", 4, [8, 14], [], [], 100, 100, 100)
+    });
+    const refs = (ids: number[]) => ids.map((typeId) => ({ typeId, typeName: TYPE_NAMES[typeId] }));
+    masterfile.types = Object.fromEntries(
+      Object.entries(TYPE_NAMES).map(([id, name]) => [id, createType(Number(id), name)])
+    );
+    Object.assign(masterfile.types["3"], {
+      weaknesses: refs([6, 13, 15]), resistances: refs([2, 7, 12]), immunes: refs([5])
+    });
+    Object.assign(masterfile.types["5"], {
+      weaknesses: refs([11, 12, 15]), resistances: refs([4, 6]), immunes: refs([13])
+    });
+    Object.assign(masterfile.types["8"], {
+      weaknesses: refs([8, 17]), resistances: refs([4, 7]), immunes: refs([1, 2])
+    });
+    Object.assign(masterfile.types["11"], {
+      weaknesses: refs([12, 13]), resistances: refs([9, 10, 11, 15])
+    });
+    Object.assign(masterfile.types["14"], {
+      weaknesses: refs([7, 8, 17]), resistances: refs([2, 14])
+    });
+    Object.assign(masterfile.types["16"], {
+      weaknesses: refs([15, 16, 18]), resistances: refs([10, 11, 12, 13])
+    });
+    Object.assign(masterfile.types["17"], {
+      weaknesses: refs([2, 7, 18]), resistances: refs([8, 17]), immunes: refs([14])
+    });
+    Object.assign(masterfile.types["18"], {
+      weaknesses: refs([4, 9]), resistances: refs([2, 7, 17]), immunes: refs([16])
+    });
+
+    const defaults = listDoubleWeaknessPresets(masterfile);
+    const expanded = listDoubleWeaknessPresets(masterfile, { coverage: "all" });
+    const find = (first: string, second = "None") => expanded.find(
+      (preset) => preset.defenderType1 === first && preset.defenderType2 === second
+    );
+
+    expect(defaults.some((preset) => preset.defenderType1 === "Water" && preset.defenderType2 === "Dragon"))
+      .toBe(false);
+    expect(expanded).toHaveLength(5);
+    expect(find("Water", "Dragon")).toMatchObject({ attackingTypeIds: [16, 18], count: 1 });
+    expect(find("Flying", "Ground")?.attackingTypeIds).toEqual([11, 15]);
+    expect(find("Dark")?.attackingTypeIds).toEqual([2, 7, 18]);
+    expect(find("Dark", "Fairy")?.attackingTypeIds).toEqual([4, 9, 18]);
+    expect(find("Ghost", "Psychic")?.attackingTypeIds).toEqual([8, 17]);
+    expect(find("Fire", "Dragon")).toBeUndefined();
   });
 
   it("applies prepared elite charged move patches to the shared masterfile", () => {

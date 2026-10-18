@@ -110,9 +110,15 @@ export interface DoubleWeaknessPreset {
   value: string;
   label: string;
   attackingType: string;
+  attackingTypeIds: number[];
   defenderType1: string;
   defenderType2: string;
   count: number;
+}
+
+export interface WeaknessPresetOptions {
+  /** Include every observed typing and group all its super-effective attack types. */
+  coverage?: "unique" | "all";
 }
 
 const NO_PRESET_DEFENDER_TYPE = "None";
@@ -515,7 +521,10 @@ function countSpeciesByTypeCombo(masterfile: Masterfile): Map<string, number> {
   return counts;
 }
 
-export function listDoubleWeaknessPresets(masterfile: Masterfile): DoubleWeaknessPreset[] {
+export function listDoubleWeaknessPresets(
+  masterfile: Masterfile,
+  options: WeaknessPresetOptions = {}
+): DoubleWeaknessPreset[] {
   const defendingTypes = Object.values(masterfile.types)
     .filter((type) => type.typeId > 0)
     .sort((left, right) => left.typeId - right.typeId);
@@ -525,13 +534,11 @@ export function listDoubleWeaknessPresets(masterfile: Masterfile): DoubleWeaknes
     DoubleWeaknessPreset & { attackingTypeId: number; defenderType1Id: number; defenderType2Id: number }
   >();
   const registerPreset = (
-    attackingTypeId: number | null,
+    attackingTypeIds: number[],
     firstType: MasterfileTypeEntry,
-    secondType?: MasterfileTypeEntry,
-    overrideAttackingType?: string
+    secondType?: MasterfileTypeEntry
   ): void => {
-    const attackingType = attackingTypeId === null ? null : masterfile.types[String(attackingTypeId)];
-    if (attackingTypeId !== null && !attackingType) {
+    if (!attackingTypeIds.length) {
       return;
     }
     const defenderType1Id = firstType.typeId;
@@ -541,7 +548,9 @@ export function listDoubleWeaknessPresets(masterfile: Masterfile): DoubleWeaknes
     if (count <= 0) {
       return;
     }
-    const attackingTypeLabel = overrideAttackingType ?? attackingType?.typeName ?? "";
+    const attackingTypeLabel = attackingTypeIds
+      .map((typeId) => masterfile.types[String(typeId)].typeName)
+      .join("+");
     const key = `${attackingTypeLabel}:${countKey}`;
     if (presets.has(key)) {
       return;
@@ -553,10 +562,11 @@ export function listDoubleWeaknessPresets(masterfile: Masterfile): DoubleWeaknes
       value: key,
       label: `${attackingTypeLabel} -> ${defenderLabel} (${count})`,
       attackingType: attackingTypeLabel,
+      attackingTypeIds,
       defenderType1: firstType.typeName,
       defenderType2: secondType?.typeName ?? NO_PRESET_DEFENDER_TYPE,
       count,
-      attackingTypeId: attackingTypeId ?? DARK_TYPE_ID,
+      attackingTypeId: attackingTypeIds[0],
       defenderType1Id,
       defenderType2Id
     });
@@ -565,8 +575,8 @@ export function listDoubleWeaknessPresets(masterfile: Masterfile): DoubleWeaknes
     const singleWeaknesses = defendingTypes
       .map((attackingType) => attackingType.typeId)
       .filter((attackingTypeId) => typeMatchupMultiplier(firstType, attackingTypeId) > 1);
-    if (singleWeaknesses.length === 1) {
-      registerPreset(singleWeaknesses[0], firstType);
+    if (options.coverage === "all" || singleWeaknesses.length === 1) {
+      registerPreset(singleWeaknesses, firstType);
     }
   }
   for (let firstIndex = 0; firstIndex < defendingTypes.length; firstIndex += 1) {
@@ -586,17 +596,21 @@ export function listDoubleWeaknessPresets(masterfile: Masterfile): DoubleWeaknes
           doubleWeaknesses.push(attackingType.typeId);
         }
       }
+      if (options.coverage === "all") {
+        registerPreset(totalWeaknesses, firstType, secondType);
+        continue;
+      }
       if (doubleWeaknesses.length === 1) {
-        registerPreset(doubleWeaknesses[0], firstType, secondType);
+        registerPreset(doubleWeaknesses, firstType, secondType);
       } else if (
         doubleWeaknesses.length === 2 &&
         doubleWeaknesses.includes(DARK_TYPE_ID) &&
         doubleWeaknesses.includes(GHOST_TYPE_ID)
       ) {
-        registerPreset(null, firstType, secondType, "Dark+Ghost");
+        registerPreset([DARK_TYPE_ID, GHOST_TYPE_ID], firstType, secondType);
       }
       if (totalWeaknesses.length === 1) {
-        registerPreset(totalWeaknesses[0], firstType, secondType);
+        registerPreset(totalWeaknesses, firstType, secondType);
       }
     }
   }

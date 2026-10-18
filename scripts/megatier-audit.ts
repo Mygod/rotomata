@@ -12,11 +12,11 @@
  * its type is covered by the relevant aura, or 1.1x otherwise, and each strategy's
  * best moveset is selected after those multipliers apply.
  *
- * The C and C- type floors are full-pool comparisons against a synthetic target
- * weak only to the audited Charged Attack type. Normal is excluded because it
- * cannot be super effective. Party of 2 ranks every mutually boosted active
- * Mega/Primal against every background-booster strategy; Gym ranks every Mega,
- * Primal, and non-Mega without a teammate aura.
+ * The C and C- floors expand the calculators' presets to every observed defender
+ * typing, grouping all its real weaknesses into one comparison. Party of 2 ranks
+ * every mutually boosted active Mega/Primal against every background-booster
+ * strategy; Gym ranks every attacker without a teammate aura. A Mega qualifies
+ * when its selected Charged Attack is super effective and covered by its own aura.
  *
  * Usage:
  *   npm run audit:megatier
@@ -45,6 +45,7 @@ import {
   calculateWeatherMoveMultiplier,
   isPvedpsWeather,
   listMegaAuraTypeIds,
+  listPvedpsWeaknessPresets,
   PVEDPS_WEATHER_OPTIONS,
   type PvedpsRow,
   type PvedpsWeather
@@ -160,6 +161,8 @@ interface MechanicalTierAudit {
 
 interface TypeLeaderComparison {
   type: string;
+  defenseTypes: string[];
+  preset: string;
   winningStrategies: string[];
   megaLeaders: string[];
   leaderDps: number;
@@ -484,7 +487,10 @@ function applyAnnouncedProjections(masterfile: Masterfile): ProjectionResult[] {
   return [
     addProjectedMove(masterfile, 15, 10_001, 311, "Fell Stinger+", 140),
     addProjectedMove(masterfile, 229, 10_002, 16, "Dark Pulse+", 150),
-    addProjectedMove(masterfile, 398, 10_003, 256, "Brave Bird+", 150)
+    addProjectedMove(masterfile, 398, 10_003, 256, "Brave Bird+", 150),
+    addProjectedMove(masterfile, 310, 10_004, 35, "Discharge+", 150),
+    addProjectedMove(masterfile, 609, 10_005, 69, "Ominous Wind+", 145),
+    addProjectedMove(masterfile, 302, 10_006, 265, "Night Shade+", 160)
   ];
 }
 
@@ -882,14 +888,23 @@ function buildTypeLeaderAudit(
   const identities = new Map(
     listMegaIdentities(masterfile).map((identity) => [identity.name, identity])
   );
-  for (const type of Object.values(masterfile.types).sort(
-    (left, right) => left.typeId - right.typeId
-  )) {
-    if (!isMegaTierTypeFloor(type.typeName)) continue;
+  const targets = listPvedpsWeaknessPresets(masterfile, { coverage: "all" });
+  const coveredTypeIds = new Set(targets.flatMap((target) => target.attackingTypeIds));
+  const missingTypes = Object.values(masterfile.types).filter(
+    (type) => isMegaTierTypeFloor(type.typeName) && !coveredTypeIds.has(type.typeId)
+  );
+  if (missingTypes.length) {
+    throw new Error(`Missing type-floor targets: ${missingTypes.map((type) => type.typeName).join(", ")}`);
+  }
+  for (const preset of targets) {
+    const attackingTypeIds = new Set(preset.attackingTypeIds.filter((typeId) =>
+      isMegaTierTypeFloor(masterfile.types[String(typeId)].typeName)
+    ));
+    if (!attackingTypeIds.size) continue;
     const rows = buildPvedpsRows(masterfile, {
       mode,
-      attackTypeId: type.typeId,
-      benchmarkAttackTypeId: type.typeId,
+      type1: preset.defenderType1,
+      type2: preset.defenderType2,
       megaTeammateBoost: mode === "party2"
     });
     const strategies = new Map<string, PvedpsRow>();
@@ -904,8 +919,8 @@ function buildTypeLeaderAudit(
       for (const booster of backgroundBoosters) {
         const background = buildPvedpsRows(masterfile, {
           mode,
-          attackTypeId: type.typeId,
-          benchmarkAttackTypeId: type.typeId,
+          type1: preset.defenderType1,
+          type2: preset.defenderType2,
           teammateAuraTypeIds: booster.auraTypeIds
         }).find((row) => !tempForms.has(row.form));
         if (background) {
@@ -932,9 +947,11 @@ function buildTypeLeaderAudit(
     const winningStrategies = rankedStrategies
       .filter(([, row]) => isWithinMegaTierLeaderTolerance(row.dps, leaderDps))
       .map(([name]) => name);
-    const megaLeaders = winningStrategies.filter((name) =>
-      identities.get(name)?.auraTypeIds.includes(type.typeId)
-    );
+    const megaLeaders = winningStrategies.filter((name) => {
+      const chargedType = resolveMoveTypeId(masterfile, strategies.get(name)?.charged);
+      return attackingTypeIds.has(chargedType) &&
+        Boolean(identities.get(name)?.auraTypeIds.includes(chargedType));
+    });
     const runnerUpDps = rankedStrategies.find(
       ([, row]) => !isWithinMegaTierLeaderTolerance(row.dps, leaderDps)
     )?.[1].dps;
@@ -949,14 +966,20 @@ function buildTypeLeaderAudit(
             )
             .map(([name]) => name);
     comparisons.push({
-      type: type.typeName,
+      type: preset.attackingType,
+      defenseTypes: [preset.defenderType1, preset.defenderType2].filter((type) => type !== "None"),
+      preset: preset.label,
       winningStrategies,
       megaLeaders,
       leaderDps,
       runnerUpStrategies,
       runnerUpDps
     });
-    if (megaLeaders.length) leaders.set(type.typeName, megaLeaders);
+    for (const name of megaLeaders) {
+      const chargedType = resolveMoveTypeId(masterfile, strategies.get(name)?.charged);
+      const typeName = masterfile.types[String(chargedType)].typeName;
+      leaders.set(typeName, Array.from(new Set([...(leaders.get(typeName) ?? []), name])));
+    }
   }
   return { leaders, comparisons };
 }
@@ -1182,7 +1205,7 @@ function outputMarkdown(
     );
   }
   console.log(
-    "- Type floors: Normal is excluded; the audited type is 1.6x effective and every other attack type is neutral; Party of 2 compares every active Mega/Primal with every background-supported non-Mega; Gym compares every attacker"
+    "- Type floors: expand the calculator presets to every observed defender typing and group all its super-effective attack types into one comparison; every strategy chooses its best moveset; qualifying Megas must use a super-effective Charged Attack covered by their aura; Party of 2 compares every active Mega/Primal with every background-supported non-Mega; Gym compares every attacker"
   );
 
   if (tierAudit) {
@@ -1194,8 +1217,8 @@ function outputMarkdown(
     }
 
     console.log("\n## Full-pool type comparisons\n");
-    console.log("| Mode | Attack type | Winning strategy | DPS | Next strategy | DPS | Margin |");
-    console.log("| --- | --- | --- | ---: | --- | ---: | ---: |");
+    console.log("| Mode | Attack type | Defender types | Preset | Winning strategy | DPS | Next strategy | DPS | Margin |");
+    console.log("| --- | --- | --- | --- | --- | ---: | --- | ---: | ---: |");
     for (const [mode, comparisons] of [
       ["Party of 2", tierAudit.party2TypeComparisons],
       ["Gym", tierAudit.gymTypeComparisons]
@@ -1205,7 +1228,7 @@ function outputMarkdown(
           ? `${((comparison.leaderDps / comparison.runnerUpDps - 1) * 100).toFixed(1)}%`
           : "-";
         console.log(
-          `| ${mode} | ${comparison.type} | ${comparison.winningStrategies.join(", ")} | ${comparison.leaderDps.toFixed(1)} | ${comparison.runnerUpStrategies.join(", ") || "-"} | ${comparison.runnerUpDps?.toFixed(1) ?? "-"} | ${margin} |`
+          `| ${mode} | ${comparison.type} | ${comparison.defenseTypes.join("/")} | ${comparison.preset} | ${comparison.winningStrategies.join(", ")} | ${comparison.leaderDps.toFixed(1)} | ${comparison.runnerUpStrategies.join(", ") || "-"} | ${comparison.runnerUpDps?.toFixed(1) ?? "-"} | ${margin} |`
         );
       }
     }
@@ -1563,6 +1586,12 @@ function outputJson(
           ordinaryTargetRule:
             "all-game-master-legendary-mythical-ultra-beast-base-profiles-plus-distinct-typed-forms",
           temporaryEvolutionTargetRule: "legendary-or-mythical-base-species-only",
+          typeFloorTargets: {
+            rule: "expanded-presets-for-all-observed-defender-typings",
+            presetCount: listPvedpsWeaknessPresets(masterfile, { coverage: "all" }).length,
+            targetCount: tierAudit?.party2TypeComparisons.length,
+            movesetRule: "best-overall-moveset-with-super-effective-aura-covered-charged-attack-for-mega-qualification"
+          },
           typedFormAssumption: {
             Arceus: ALL_TYPES,
             Silvally: ALL_TYPES
