@@ -490,7 +490,8 @@ function applyAnnouncedProjections(masterfile: Masterfile): ProjectionResult[] {
     addProjectedMove(masterfile, 398, 10_003, 256, "Brave Bird+", 150),
     addProjectedMove(masterfile, 310, 10_004, 35, "Discharge+", 150),
     addProjectedMove(masterfile, 609, 10_005, 69, "Ominous Wind+", 145),
-    addProjectedMove(masterfile, 302, 10_006, 265, "Night Shade+", 160)
+    addProjectedMove(masterfile, 302, 10_006, 265, "Night Shade+", 160),
+    addProjectedMove(masterfile, 36, 10_007, 87, "Moonblast+", 160)
   ];
 }
 

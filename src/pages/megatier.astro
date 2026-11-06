@@ -34,7 +34,7 @@ interface PlusMove {
 const officialMegaUpdate = "https://pokemongo.com/news/more-mega-updates-2026";
 const officialMegaChandelure =
   "https://pokemongo.com/en/news/chandelure-super-mega-raid-day-2026";
-const officialMegaSableye = "https://pokemongo.com/en/news/halloween-part-2-2026";
+const officialMegaClefable = "https://pokemongo.com/en/news/clefable-super-mega-raid-day-2026";
 const officialRaidPool = "https://pokemongo.com/news/road-of-legends-2026?hl=en";
 const officialMegaFinale = "https://pokemongo.com/gofest/megafinale";
 const officialHoopaRaid = "https://pokemongo.com/post/elite-raids-new-feature?hl=en";
@@ -45,7 +45,7 @@ const officialMegaBoost =
 const officialWeatherBoost =
   "https://niantic.helpshift.com/hc/en/6-pokemon-go/faq/53-what-are-weather-boosts/?f=weather-boosts&l=en";
 const gameMasterSource =
-  "https://raw.githubusercontent.com/alexelgt/game_masters/refs/heads/master/GAME_MASTER.json";
+  "https://raw.githubusercontent.com/alexelgt/game_masters/430416c35044879271598f11cd87ce7b99ffcacb/GAME_MASTER.json";
 const masterfileSnapshot =
   "https://raw.githubusercontent.com/WatWowMap/Masterfile-Generator/ae1b4362405f1f9706ad4d775d59ffaa242d590c/master-latest-rotomata.json";
 const futureMoveNames =
@@ -55,24 +55,14 @@ const visualTierList =
 
 const plusMoves: PlusMove[] = [
   {
-    pokemon: "Mega Chandelure",
-    move: "Ominous Wind+",
-    basePower: 145,
-    effectivePower: 188.5,
-    party2Gain: "+38.9%",
-    availability: "Announced for October 31",
-    status: "Game Master stats",
-    source: officialMegaChandelure,
-  },
-  {
-    pokemon: "Mega Sableye",
-    move: "Night Shade+",
+    pokemon: "Mega Clefable",
+    move: "Moonblast+",
     basePower: 160,
     effectivePower: 208,
-    party2Gain: "+60.8%",
-    availability: "Announced for November 1",
+    party2Gain: "+49.2%",
+    availability: "Announced for November 28",
     status: "Projected timing",
-    source: officialMegaSableye,
+    source: officialMegaClefable,
   },
 ];
 
@@ -94,7 +84,6 @@ const unreleasedMegas = new Set([
   "Mega Scolipede",
   "Mega Scrafty",
   "Mega Eelektross",
-  "Mega Chandelure",
   "Mega Golurk",
   "Mega Pyroar",
   "Mega Floette",
@@ -159,14 +148,14 @@ const tiers: Tier[] = [
       {
         name: "Mega Mewtwo X",
         rationale:
-          "Mewtwo X has three outright-and-aligned profiles, beating the best background strategy by 22.9% to 47.3%. It adds four catch-only leadership profiles at 1.0% to 42.1% and 31 outright profiles at 15.1% to 86.7%; Dynamic Punch+ handles most Fighting offense while Psystrike supplies the aligned Psychic cases.",
+          "Mewtwo X has three outright-and-aligned profiles, beating the best background strategy by 22.9% to 47.3%. It adds four catch-only leadership profiles at 1.0% to 42.1% and 30 outright profiles at 15.1% to 86.7%; Dynamic Punch+ handles most Fighting offense while Psystrike supplies the aligned Psychic cases.",
         evidence: {
           outrightAligned:
             "Cobalion; Crowned Shield Zamazenta; and Single Strike Urshifu.",
           candyAligned:
             "Terrakion; Meloetta and Pirouette Meloetta; and Okidogi.",
           outright:
-            "Regirock, Regice, and Registeel; Dialga and Origin Dialga; Regigigas; Darkrai and Mega Darkrai; Arceus (Normal, Dark, Ice, Rock, and Steel); Kyurem, Black Kyurem, and White Kyurem; Type: Null; Silvally (Normal, Dark, Ice, Rock, and Steel); Guzzlord; Stakataka; Meltan; Melmetal; Glastrier; Chien-Pao; Ting-Lu; Chi-Yu; and Terapagos.",
+            "Regirock, Regice, and Registeel; Dialga and Origin Dialga; Regigigas; Darkrai and Mega Darkrai; Arceus (Normal, Dark, Ice, Rock, and Steel); Kyurem, Black Kyurem, and White Kyurem; Type: Null; Silvally (Normal, Dark, Ice, Rock, and Steel); Stakataka; Meltan; Melmetal; Glastrier; Chien-Pao; Ting-Lu; Chi-Yu; and Terapagos.",
         },
       },
       {
@@ -183,7 +172,7 @@ const tiers: Tier[] = [
       {
         name: "Mega Chandelure",
         rationale:
-          "Ominous Wind+ is announced for October 31 and already has Game Master combat stats. Hex and Ominous Wind+ make Chandelure the Party-of-2 Ghost type leader, with six simultaneous outright and catch-aligned profiles at 3.7% to 9.9% over the best background strategy. It also wins outright against Tapu Lele and Dawn Wings Necrozma; the latter encounter awards ordinary Necrozma, so it is not catch-aligned.",
+          "At Ominous Wind+'s permanent 145 base power, Hex and Ominous Wind+ make Chandelure the Party-of-2 Ghost type leader, with six simultaneous outright and catch-aligned profiles at 3.7% to 9.9% over the best background strategy. It also wins outright against Tapu Lele and Dawn Wings Necrozma; the latter encounter awards ordinary Necrozma, so it is not catch-aligned.",
         evidence: {
           outrightAligned:
             "Arceus (Ghost); Hoopa; Silvally (Ghost); Lunala; Spectrier; and Shadow Rider Calyrex.",
@@ -317,6 +306,15 @@ const tiers: Tier[] = [
             "Mega Mewtwo Y; Mewtwo; Mew; Celebi; Latias and Mega Latias; Latios and Mega Latios; all four Deoxys formes; Uxie; Mesprit; Azelf; Cresselia; Shaymin; Arceus (Grass and Psychic); Meloetta; Hoopa Unbound; Silvally (Grass and Psychic); Cosmog; Cosmoem; Necrozma and Ultra Necrozma; Zarude; Calyrex and Ice Rider Calyrex; Wo-Chien; Iron Leaves; Ogerpon; and Iron Boulder.",
         },
       },
+      {
+        name: "Mega Clefable",
+        projection: "Announced move",
+        rationale:
+          "With Moonblast+ projected at 160 base power, 100 energy, and ordinary Moonblast's 4-second duration, Pound and Moonblast+ take the outright duo lead against Guzzlord by 23.0% over Shadow Origin Palkia supported by Mega Rayquaza. Clefable's Flying/Fairy aura does not boost Guzzlord's Dragon/Dark catch types. Its lead over Mega Mewtwo X is only 1.03%, so the B− placement is sensitive to the unconfirmed timing.",
+        evidence: {
+          outright: "Guzzlord (projected Moonblast+ timing).",
+        },
+      },
     ],
   },
   {
@@ -391,7 +389,6 @@ const tiers: Tier[] = [
         "Mega Charizard X",
         "Mega Charizard Y",
         "Mega Pidgeot",
-        "Mega Clefable",
         "Mega Pinsir",
         "Mega Aerodactyl",
         "Mega Ampharos",
@@ -462,9 +459,8 @@ const tiers: Tier[] = [
       ),
       {
         name: "Mega Sableye",
-        projection: "Announced move",
         rationale:
-          "Night Shade+ is announced for November 1 with 160 Raid power. Assuming 100 energy and ordinary Night Shade's 2.5-second duration, its projected Party-of-2 DPS against Lunala (Ghost/Psychic) rises 60.8%, accounting for its existing Dark moves as well. It has no qualifying boss lead in baseline or weather. Its Ghost/Dark aura duplicates higher-tier Mega Absol Z, leaving it in E.",
+          "Night Shade+ has confirmed Game Master stats of 160 Raid power, 100 energy, and a 2.5-second duration, matching the previous projection. Its Party-of-2 DPS against Lunala (Ghost/Psychic) rises 60.8%, accounting for its existing Dark moves as well. It has no qualifying boss lead in baseline or weather. Its Ghost/Dark aura duplicates higher-tier Mega Absol Z, leaving it in E.",
       },
       ...simpleEntries(
         "Mega Medicham",
@@ -552,7 +548,7 @@ if (tierEntries.length !== 95 || new Set(tierEntries.map((entry) => entry.name))
 >
   <article class="tool-page mega-tier-page">
     <header class="tool-page-header">
-      <p class="tool-kicker">Current ranking · Mega Level 4 · updated October 18, 2026</p>
+      <p class="tool-kicker">Current ranking · Mega Level 4 · updated November 6, 2026</p>
       <h1>Mega Tier List</h1>
       <p>
         A mechanical Mega and Primal ranking after the Super Max “+” attack update. Party-of-2 raid
@@ -704,9 +700,10 @@ if (tierEntries.length !== 95 || new Set(tierEntries.map((entry) => entry.name))
         >, the <a href={officialMegaFinale} target="_blank" rel="noreferrer">Mega Finale</a>, and the
         <a href={officialHoopaRaid} target="_blank" rel="noreferrer">Hoopa Unbound Elite Raid</a>.
         Every other Game Master target is visibly treated as a foreseeable assumption. This
-        October 18 audit uses the <a href={masterfileSnapshot} target="_blank" rel="noreferrer"
+        November 6 audit uses the <a href={masterfileSnapshot} target="_blank" rel="noreferrer"
           >October 16 masterfile snapshot</a
-        > and the announced Night Shade+ projection. Within
+        > with Night Shade+ at its now-confirmed stats and the announced Moonblast+ projection.
+        Chandelure uses its permanent 145 base power; temporary event bonuses are excluded. Within
         each tier, entries are ordered by National Pokedex number rather than strength. Run <code
           >npm run audit:megatier -- --masterfile /path/to/master-latest-rotomata.json</code
           > to regenerate the target pool, background comparisons, full-pool type leaders,
@@ -722,11 +719,11 @@ if (tierEntries.length !== 95 || new Set(tierEntries.map((entry) => entry.name))
           <p class="eyebrow">Upcoming updates</p>
           <h2 id="move-impact-heading">Announced “+” attacks</h2>
         </div>
-        <span>1 with full stats · 1 timing projection</span>
+        <span>1 timing projection</span>
       </div>
       <p>
-        Party-of-2 gain uses the calculator's Dark/Ghost weakness preset against Lunala
-        (Ghost/Psychic). It compares the same level-52 Mega with and without the additional move,
+        Party-of-2 gain uses Guzzlord's Dragon/Dark typing. It compares the same level-52 Mega
+        with and without the additional move,
         before a teammate aura is applied, choosing its best moveset on each side. The percentage
         is a combat input, not a tier score.
       </p>
@@ -738,7 +735,7 @@ if (tierEntries.length !== 95 || new Set(tierEntries.map((entry) => entry.name))
               <th>Additional attack</th>
               <th>Base power</th>
               <th>Level 4 power</th>
-              <th>Party 2 gain vs. Ghost/Psychic</th>
+              <th>Party 2 gain vs. Dragon/Dark</th>
             </tr>
           </thead>
           <tbody>
@@ -761,31 +758,22 @@ if (tierEntries.length !== 95 || new Set(tierEntries.map((entry) => entry.name))
         </table>
       </div>
       <p class="projection-note">
-        <strong>Confirmed combat record:</strong> The <a
-          href={gameMasterSource}
-          target="_blank"
-          rel="noreferrer">Game Master</a
-        > confirms Ominous Wind+ at 145 power, 100 energy, and 2.5 seconds,
-        despite its <a href={officialMegaChandelure} target="_blank" rel="noreferrer"
-          >October 31 debut</a
-        > being upcoming.
-      </p>
-      <p class="projection-note">
         <strong>Announced projection:</strong> <a
-          href={officialMegaSableye}
+          href={officialMegaClefable}
           target="_blank"
-          rel="noreferrer">Night Shade+ is announced for November 1</a
+          rel="noreferrer">Moonblast+ is announced for November 28</a
         > with 160 Raid power. Its energy, duration, and attachment are absent from the Game
-        Master checked October 18. The Sableye calculation assumes 100 energy and ordinary Night
-        Shade's 2.5-second duration; the power comes from the official announcement.
+        Master checked November 6. The Clefable calculation assumes 100 energy and ordinary
+        Moonblast's 4-second duration; the power comes from the official announcement.
       </p>
       <p class="projection-note">
         <strong>Temporary Chandelure bonuses:</strong> Its <a
           href={officialMegaChandelure}
           target="_blank"
           rel="noreferrer">Global Challenge</a
-        > can increase Ominous Wind+ power and Super Max CP from November 2 to 15. The amounts
-        depend on challenge results, so this ranking uses its permanent stats.
+        > boosts Ominous Wind+ power and Super Max CP from November 2 to 15. The November 3
+        Game Master has 174 base power, 20% above its permanent 145. This ranking excludes
+        those temporary bonuses.
       </p>
     </section>
 
